@@ -1,9 +1,12 @@
 """WebSocket endpoints for host and player connections."""
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.database import SessionLocal
+from app.game import run_game
 from app.rooms import manager
 from app.schemas import (
     ErrorMessage,
@@ -43,6 +46,9 @@ async def websocket_host(websocket: WebSocket) -> None:
             msg_type = data.get("type") if isinstance(data, dict) else None
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
+            elif msg_type == "start_game":
+                # Kick off the game loop as a background task so we keep receiving host messages.
+                asyncio.create_task(run_game(room))
             else:
                 await websocket.send_json(
                     ErrorMessage(message=f"Unknown message type: {msg_type}").model_dump()
@@ -118,8 +124,28 @@ async def websocket_play(
             msg_type = data.get("type") if isinstance(data, dict) else None
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
+            elif msg_type == "submit_answer":
+                # Only accept if a round is in progress and player hasn't answered yet
+                current_answers = getattr(room, "current_answers", None)
+                if current_answers is None:
+                    await websocket.send_json(
+                        ErrorMessage(message="No active round").model_dump()
+                    )
+                    continue
+                if player.id in current_answers:
+                    await websocket.send_json(
+                        ErrorMessage(message="You already answered this round").model_dump()
+                    )
+                    continue
+                choice = data.get("choice")
+                response_time_ms = int(data.get("response_time_ms", 0))
+                if not isinstance(choice, str):
+                    await websocket.send_json(
+                        ErrorMessage(message="Invalid choice").model_dump()
+                    )
+                    continue
+                current_answers[player.id] = (choice, response_time_ms)
             else:
-                # Other message types handled in game loop task
                 await websocket.send_json(
                     ErrorMessage(message=f"Unknown message type: {msg_type}").model_dump()
                 )
