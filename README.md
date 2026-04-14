@@ -1,5 +1,7 @@
 # Trivia Game
 
+[![CI](https://github.com/AlexanderNicholasIvanov/trivia-game/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexanderNicholasIvanov/trivia-game/actions/workflows/ci.yml)
+
 Real-time multiplayer trivia game. Host creates a room, players join with a code on their phones, questions broadcast live with timed scoring.
 
 ## Stack
