@@ -19,7 +19,15 @@ Real-time multiplayer trivia game. Host creates a room, players join with a code
 - Node 20+
 - PostgreSQL 16 running locally
 
-### Backend
+### Run both (recommended)
+
+```bash
+./dev.sh
+```
+
+Boots the FastAPI backend on `:8000` and the Vite frontend on `:5173`. Creates the venv and installs dependencies on first run. `Ctrl+C` stops both.
+
+### Backend only
 
 ```bash
 cd backend
@@ -30,7 +38,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-### Frontend
+### Frontend only
 
 ```bash
 cd frontend
