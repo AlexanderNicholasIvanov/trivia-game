@@ -68,6 +68,9 @@ async def run_game(room: Room) -> None:
         game.status = GameStatus.FINISHED
         db.commit()
         await room.broadcast(GameOver(leaderboard=_leaderboard(room)).model_dump())
+    except asyncio.CancelledError:
+        # Host disconnected (or room closed) — abort silently.
+        raise
     finally:
         db.close()
 
@@ -97,10 +100,8 @@ async def _run_single_round(
     duration_ms = ROUND_DURATION_SECONDS * 1000
 
     # Track live answers keyed by player_id
-    room.current_round_id = game_round.id  # type: ignore[attr-defined]
-    room.current_answers = {}  # type: ignore[attr-defined]
-    room.current_question = question  # type: ignore[attr-defined]
-    room.current_duration_ms = duration_ms  # type: ignore[attr-defined]
+    room.current_round_id = game_round.id
+    room.current_answers = {}
 
     # Broadcast round start
     await room.broadcast(
@@ -116,12 +117,12 @@ async def _run_single_round(
     # Wait for all players to answer, or until the timer runs out
     start = asyncio.get_event_loop().time()
     while asyncio.get_event_loop().time() - start < ROUND_DURATION_SECONDS:
-        if room.players and len(room.current_answers) >= len(room.players):  # type: ignore[attr-defined]
+        if room.players and len(room.current_answers) >= len(room.players):
             break
         await asyncio.sleep(0.2)
 
     # Persist answers + scores
-    for player_id, (choice, response_time_ms) in room.current_answers.items():  # type: ignore[attr-defined]
+    for player_id, (choice, response_time_ms) in room.current_answers.items():
         is_correct = choice == question.correct_answer
         points = _calculate_points(is_correct, response_time_ms, duration_ms)
 
@@ -147,9 +148,8 @@ async def _run_single_round(
     db.commit()
 
     # Clear round state
-    room.current_round_id = None  # type: ignore[attr-defined]
-    room.current_answers = {}  # type: ignore[attr-defined]
-    room.current_question = None  # type: ignore[attr-defined]
+    room.current_round_id = None
+    room.current_answers = {}
 
     # Broadcast round end
     await room.broadcast(

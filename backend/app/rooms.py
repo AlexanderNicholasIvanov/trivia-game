@@ -31,6 +31,9 @@ class Room:
     host_ws: WebSocket
     players: dict[int, LivePlayer] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    game_task: asyncio.Task | None = None
+    current_round_id: int | None = None
+    current_answers: dict[int, tuple[str, int]] = field(default_factory=dict)
 
     def player_list(self) -> list[dict]:
         return [
@@ -50,9 +53,10 @@ class Room:
         targets: list[WebSocket] = []
         if include_host:
             targets.append(self.host_ws)
+        # Snapshot to avoid "dict changed size during iteration" if a player disconnects mid-broadcast.
         targets.extend(
             p.websocket
-            for pid, p in self.players.items()
+            for pid, p in list(self.players.items())
             if p.websocket and pid not in excluded
         )
 
@@ -119,9 +123,16 @@ class RoomManager:
         async with room.lock:
             room.players.pop(player_id, None)
 
-    async def close_room(self, code: str) -> None:
+    async def close_room(self, code: str) -> Room | None:
         async with self._lock:
-            self._rooms.pop(code, None)
+            room = self._rooms.pop(code, None)
+        if room is not None and room.game_task is not None and not room.game_task.done():
+            room.game_task.cancel()
+            try:
+                await room.game_task
+            except (asyncio.CancelledError, Exception):
+                pass
+        return room
 
 
 # Singleton manager used by the API

@@ -79,3 +79,7 @@ class RoundEnd(BaseModel):
 class GameOver(BaseModel):
     type: Literal["game_over"] = "game_over"
     leaderboard: list[PlayerInfo]
+
+
+class HostLeft(BaseModel):
+    type: Literal["host_left"] = "host_left"

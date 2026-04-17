@@ -165,17 +165,17 @@ function HostRoundView({ round }: { round: ReturnType<typeof useStore.getState>[
         <span className="text-5xl font-black text-pink-400 font-mono">{timeLeft}s</span>
       </div>
       <div className="flex-1 flex flex-col justify-center items-center text-center max-w-4xl mx-auto">
-        <p
-          className="text-4xl md:text-5xl font-bold mb-12 leading-tight"
-          dangerouslySetInnerHTML={{ __html: round.question }}
-        />
+        <p className="text-4xl md:text-5xl font-bold mb-12 leading-tight">
+          {round.question}
+        </p>
         <div className="grid grid-cols-2 gap-4 w-full">
           {round.options.map((opt, i) => (
             <div
               key={i}
               className={`${colorFor(i)} rounded-2xl p-6 text-xl font-semibold`}
-              dangerouslySetInnerHTML={{ __html: opt }}
-            />
+            >
+              {opt}
+            </div>
           ))}
         </div>
       </div>
@@ -194,10 +194,7 @@ function IntermissionView({
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
       <div className="max-w-3xl mx-auto text-center">
         <p className="text-slate-400 mb-2">The answer was</p>
-        <h2
-          className="text-5xl font-bold mb-10 text-emerald-400"
-          dangerouslySetInnerHTML={{ __html: correctAnswer }}
-        />
+        <h2 className="text-5xl font-bold mb-10 text-emerald-400">{correctAnswer}</h2>
         <Leaderboard rows={leaderboard} />
       </div>
     </div>

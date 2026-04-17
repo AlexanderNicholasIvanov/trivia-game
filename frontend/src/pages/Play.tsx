@@ -67,6 +67,9 @@ export default function Play() {
         case 'game_over':
           endGame(msg.leaderboard)
           break
+        case 'host_left':
+          setError('Host ended the game.')
+          break
         case 'error':
           setError(msg.message)
           break
@@ -137,10 +140,7 @@ export default function Play() {
             <div className="text-2xl font-semibold text-slate-300 mb-3">
               Answer locked in!
             </div>
-            <p
-              className="text-slate-400"
-              dangerouslySetInnerHTML={{ __html: submittedChoice }}
-            />
+            <p className="text-slate-400">{submittedChoice}</p>
             <p className="text-slate-500 mt-8 text-sm">Waiting for other players...</p>
           </div>
         ) : (
@@ -150,8 +150,9 @@ export default function Play() {
                 key={i}
                 onClick={() => submitAnswer(opt)}
                 className={`${colorFor(i)} rounded-2xl p-6 text-xl font-semibold text-white active:scale-95 transition`}
-                dangerouslySetInnerHTML={{ __html: opt }}
-              />
+              >
+                {opt}
+              </button>
             ))}
           </div>
         )}
@@ -172,10 +173,7 @@ export default function Play() {
           {wasCorrect ? 'Correct!' : 'Nope.'}
         </div>
         <p className="text-slate-400 mb-1">The answer was</p>
-        <p
-          className="text-2xl font-bold mb-10"
-          dangerouslySetInnerHTML={{ __html: lastCorrectAnswer }}
-        />
+        <p className="text-2xl font-bold mb-10">{lastCorrectAnswer}</p>
         <div className="text-slate-400 mb-1">Your score</div>
         <div className="text-5xl font-mono text-pink-300 mb-6">
           {selfPlayer?.score ?? 0}

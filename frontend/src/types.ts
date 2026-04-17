@@ -20,6 +20,7 @@ export type ServerMessage =
   | { type: 'round_end'; correct_answer: string; leaderboard: PlayerInfo[] }
   | { type: 'game_over'; leaderboard: PlayerInfo[] }
   | { type: 'error'; message: string }
+  | { type: 'host_left' }
   | { type: 'pong' }
 
 export type GamePhase = 'home' | 'lobby' | 'round' | 'intermission' | 'finished'

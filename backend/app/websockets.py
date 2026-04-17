@@ -10,6 +10,7 @@ from app.game import run_game
 from app.rooms import manager
 from app.schemas import (
     ErrorMessage,
+    HostLeft,
     JoinedAck,
     PlayerInfo,
     PlayerJoined,
@@ -48,7 +49,9 @@ async def websocket_host(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "pong"})
             elif msg_type == "start_game":
                 # Kick off the game loop as a background task so we keep receiving host messages.
-                asyncio.create_task(run_game(room))
+                # Track it on the room so close_room can cancel it on disconnect.
+                if room.game_task is None or room.game_task.done():
+                    room.game_task = asyncio.create_task(run_game(room))
             else:
                 await websocket.send_json(
                     ErrorMessage(message=f"Unknown message type: {msg_type}").model_dump()
@@ -56,10 +59,19 @@ async def websocket_host(websocket: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
-        # When host disconnects, tear down the room.
+        # When host disconnects, tear down the room and notify players.
         try:
             if "room" in locals():
-                await manager.close_room(room.code)
+                closed = await manager.close_room(room.code)
+                if closed is not None:
+                    host_left_msg = HostLeft().model_dump()
+                    await closed.broadcast(host_left_msg, include_host=False)
+                    for live in list(closed.players.values()):
+                        if live.websocket is not None:
+                            try:
+                                await live.websocket.close()
+                            except Exception:
+                                pass
         finally:
             db.close()
 
@@ -126,12 +138,12 @@ async def websocket_play(
                 await websocket.send_json({"type": "pong"})
             elif msg_type == "submit_answer":
                 # Only accept if a round is in progress and player hasn't answered yet
-                current_answers = getattr(room, "current_answers", None)
-                if current_answers is None:
+                if room.current_round_id is None:
                     await websocket.send_json(
                         ErrorMessage(message="No active round").model_dump()
                     )
                     continue
+                current_answers = room.current_answers
                 if player.id in current_answers:
                     await websocket.send_json(
                         ErrorMessage(message="You already answered this round").model_dump()
