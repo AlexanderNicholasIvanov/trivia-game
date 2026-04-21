@@ -68,7 +68,7 @@ export default function Play() {
           endGame(msg.leaderboard)
           break
         case 'host_left':
-          setError('Host ended the game.')
+          setError('The host closed the bar.')
           break
         case 'error':
           setError(msg.message)
@@ -97,66 +97,33 @@ export default function Play() {
   }
 
   if (!roomCode || !nickname) {
-    return <CenteredMessage>Missing room code or nickname.</CenteredMessage>
+    return <Centered kicker="missing info">No room or name supplied.</Centered>
   }
-
   if (error) {
-    return <CenteredMessage>{error}</CenteredMessage>
+    return (
+      <Centered kicker="tough break">
+        <span className="neon-text-pink">{error}</span>
+      </Centered>
+    )
   }
-
   if (!connected) {
-    return <CenteredMessage>Connecting...</CenteredMessage>
+    return <Centered kicker="connecting">Hold tight&hellip;</Centered>
   }
 
   const selfPlayer = players.find((p) => p.id === selfPlayerId)
 
   if (phase === 'lobby') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-center">
-        <p className="text-slate-400 mb-2">You're in!</p>
-        <h1 className="text-4xl font-bold mb-6">{nickname}</h1>
-        <div className="text-slate-500 mb-4">Room</div>
-        <div className="text-5xl font-mono tracking-widest mb-10">{roomCode}</div>
-        <p className="text-slate-400">Waiting for host to start the game...</p>
-        <p className="text-slate-600 mt-8 text-sm">
-          {players.length} player{players.length === 1 ? '' : 's'} in the room
-        </p>
-      </div>
-    )
+    return <PlayerLobby nickname={nickname} roomCode={roomCode} count={players.length} />
   }
 
   if (phase === 'round' && round) {
     return (
-      <div className="min-h-screen p-4 flex flex-col bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
-        <div className="flex justify-between text-sm text-slate-400 mb-4">
-          <span>{nickname}</span>
-          <span>
-            Round {round.roundNumber}/{round.totalRounds}
-          </span>
-        </div>
-
-        {submittedChoice ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="text-2xl font-semibold text-slate-300 mb-3">
-              Answer locked in!
-            </div>
-            <p className="text-slate-400">{submittedChoice}</p>
-            <p className="text-slate-500 mt-8 text-sm">Waiting for other players...</p>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col justify-center gap-3">
-            {round.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => submitAnswer(opt)}
-                className={`${colorFor(i)} rounded-2xl p-6 text-xl font-semibold text-white active:scale-95 transition`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <RoundView
+        round={round}
+        nickname={nickname}
+        submittedChoice={submittedChoice}
+        onSubmit={submitAnswer}
+      />
     )
   }
 
@@ -164,61 +131,539 @@ export default function Play() {
     const myRank = leaderboard.findIndex((p) => p.id === selfPlayerId)
     const wasCorrect = submittedChoice === lastCorrectAnswer
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-center">
-        <div
-          className={`text-5xl font-black mb-8 ${
-            wasCorrect ? 'text-emerald-400' : 'text-rose-400'
-          }`}
-        >
-          {wasCorrect ? 'Correct!' : 'Nope.'}
-        </div>
-        <p className="text-slate-400 mb-1">The answer was</p>
-        <p className="text-2xl font-bold mb-10">{lastCorrectAnswer}</p>
-        <div className="text-slate-400 mb-1">Your score</div>
-        <div className="text-5xl font-mono text-pink-300 mb-6">
-          {selfPlayer?.score ?? 0}
-        </div>
-        {myRank >= 0 && (
-          <p className="text-slate-400">
-            Rank: #{myRank + 1} of {leaderboard.length}
-          </p>
-        )}
-      </div>
+      <IntermissionView
+        wasCorrect={wasCorrect}
+        correctAnswer={lastCorrectAnswer}
+        score={selfPlayer?.score ?? 0}
+        rank={myRank >= 0 ? myRank + 1 : null}
+        totalPlayers={leaderboard.length}
+      />
     )
   }
 
   if (phase === 'finished') {
     const myRank = leaderboard.findIndex((p) => p.id === selfPlayerId)
     const me = leaderboard[myRank]
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-center">
-        <h1 className="text-5xl font-black mb-6 bg-gradient-to-r from-amber-300 to-pink-400 bg-clip-text text-transparent">
-          Game Over
-        </h1>
-        <p className="text-slate-400 mb-1">You finished</p>
-        <div className="text-6xl font-black mb-4">#{myRank + 1}</div>
-        <p className="text-slate-400 mb-1">with</p>
-        <div className="text-4xl font-mono text-pink-300">{me?.score ?? 0} pts</div>
-      </div>
-    )
+    return <FinalView rank={myRank + 1} score={me?.score ?? 0} total={leaderboard.length} />
   }
 
-  return <CenteredMessage>Loading...</CenteredMessage>
+  return <Centered kicker="huh">Still loading&hellip;</Centered>
 }
 
-function CenteredMessage({ children }: { children: React.ReactNode }) {
+function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center text-slate-400 text-xl p-6 text-center">
+    <div className="relative min-h-screen overflow-hidden px-5 py-8 flex flex-col">
       {children}
     </div>
   )
 }
 
-function colorFor(i: number): string {
-  return [
-    'bg-rose-600 hover:bg-rose-500',
-    'bg-blue-600 hover:bg-blue-500',
-    'bg-emerald-600 hover:bg-emerald-500',
-    'bg-amber-600 hover:bg-amber-500',
-  ][i % 4]
+function TopTag({
+  nickname,
+  right,
+}: {
+  nickname: string
+  right?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-2">
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{
+            backgroundColor: 'var(--color-neon)',
+            boxShadow:
+              '0 0 6px rgba(255,61,127,0.9), 0 0 14px rgba(255,61,127,0.5)',
+          }}
+        />
+        <span
+          className="font-mono text-[10px] uppercase tracking-[0.35em] text-[color:var(--color-paper-dim)]"
+        >
+          {nickname}
+        </span>
+      </div>
+      {right}
+    </div>
+  )
 }
+
+function PlayerLobby({
+  nickname,
+  roomCode,
+  count,
+}: {
+  nickname: string
+  roomCode: string
+  count: number
+}) {
+  return (
+    <Frame>
+      <TopTag nickname={nickname} />
+
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <p className="chalk text-sm uppercase tracking-[0.4em] mb-3 flicker-slow">
+          you're on the list
+        </p>
+        <h1
+          className="neon-text-amber flicker mb-6"
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: 'clamp(3rem, 18vw, 5rem)',
+            lineHeight: 0.9,
+          }}
+        >
+          HELLO,
+        </h1>
+        <p
+          className="mb-10 neon-text-pink"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(1.75rem, 7vw, 2.5rem)',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {nickname.toUpperCase()}
+        </p>
+
+        <div className="mb-10">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-2">
+            your table
+          </p>
+          <p
+            className="neon-text-amber"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '3rem',
+              letterSpacing: '0.3em',
+              fontWeight: 700,
+            }}
+          >
+            {roomCode}
+          </p>
+        </div>
+
+        <p className="chalk text-lg italic mb-1 flicker-slow">
+          the quizmaster is pouring drinks&hellip;
+        </p>
+        <p className="font-mono text-xs text-[color:var(--color-paper-dim)] tracking-[0.2em] uppercase">
+          {count} {count === 1 ? 'person' : 'people'} in tonight
+        </p>
+      </div>
+    </Frame>
+  )
+}
+
+function RoundView({
+  round,
+  nickname,
+  submittedChoice,
+  onSubmit,
+}: {
+  round: NonNullable<ReturnType<typeof useStore.getState>['round']>
+  nickname: string
+  submittedChoice: string | null
+  onSubmit: (choice: string) => void
+}) {
+  const [timeLeft, setTimeLeft] = useState(round.durationSeconds)
+
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = (Date.now() - round.startedAt) / 1000
+      setTimeLeft(Math.max(0, Math.ceil(round.durationSeconds - elapsed)))
+    }
+    tick()
+    const interval = setInterval(tick, 200)
+    return () => clearInterval(interval)
+  }, [round])
+
+  const urgent = timeLeft <= 5
+
+  if (submittedChoice) {
+    return (
+      <Frame>
+        <TopTag
+          nickname={nickname}
+          right={
+            <span
+              className="font-mono text-xs tracking-[0.3em] uppercase text-[color:var(--color-paper-dim)]"
+            >
+              R{round.roundNumber}/{round.totalRounds}
+            </span>
+          }
+        />
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <p className="chalk text-sm uppercase tracking-[0.4em] mb-4">
+            locked in
+          </p>
+          <h2
+            className="neon-text-pink flicker-slow mb-8"
+            style={{
+              fontFamily: 'var(--font-shade)',
+              fontSize: 'clamp(3rem, 16vw, 5rem)',
+              lineHeight: 0.9,
+            }}
+          >
+            ✓
+          </h2>
+          <div
+            className="surface-paper rounded-sm px-6 py-4 mb-10 max-w-sm"
+            style={{
+              boxShadow: '0 12px 28px -6px rgba(0,0,0,0.5)',
+              transform: 'rotate(-1deg)',
+            }}
+          >
+            <p
+              className="text-xl leading-tight"
+              style={{
+                fontFamily: 'var(--font-serif)',
+                fontWeight: 700,
+                color: 'var(--color-felt)',
+              }}
+            >
+              {submittedChoice}
+            </p>
+          </div>
+          <p className="chalk italic flicker-slow">
+            watching the others sweat&hellip;
+          </p>
+        </div>
+      </Frame>
+    )
+  }
+
+  return (
+    <Frame>
+      <TopTag
+        nickname={nickname}
+        right={
+          <span
+            className="font-mono text-xs tracking-[0.3em] uppercase text-[color:var(--color-paper-dim)]"
+          >
+            R{round.roundNumber}/{round.totalRounds}
+          </span>
+        }
+      />
+
+      {/* Timer bar */}
+      <div className="mb-5">
+        <div className="flex items-baseline justify-between mb-1">
+          <span
+            className="font-mono text-[10px] uppercase tracking-[0.3em] text-[color:var(--color-paper-dim)]"
+          >
+            time left
+          </span>
+          <span
+            className={urgent ? 'neon-text-pink' : 'neon-text-amber'}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            {String(timeLeft).padStart(2, '0')}
+          </span>
+        </div>
+        <div
+          className="h-1 w-full overflow-hidden rounded-full"
+          style={{ backgroundColor: 'rgba(232, 219, 184, 0.1)' }}
+        >
+          <div
+            className="h-full transition-[width] duration-300 ease-linear"
+            style={{
+              width: `${(timeLeft / round.durationSeconds) * 100}%`,
+              backgroundColor: urgent
+                ? 'var(--color-neon)'
+                : 'var(--color-amber)',
+              boxShadow: urgent
+                ? '0 0 10px rgba(255,61,127,0.7)'
+                : '0 0 10px rgba(255,179,71,0.7)',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Question on paper */}
+      <div
+        className="surface-paper relative rounded-sm px-5 py-5 mb-5 rise"
+        style={{
+          boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
+          transform: 'rotate(-0.3deg)',
+        }}
+      >
+        <p
+          className="leading-tight text-center"
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: 'clamp(1.1rem, 5vw, 1.5rem)',
+            fontWeight: 600,
+            color: 'var(--color-ink)',
+          }}
+        >
+          {round.question}
+        </p>
+      </div>
+
+      {/* Buzzers */}
+      <div className="grid flex-1 grid-cols-1 gap-3 content-stretch">
+        {round.options.map((opt, i) => (
+          <button
+            key={i}
+            onClick={() => onSubmit(opt)}
+            className="group relative overflow-hidden rounded-sm px-5 py-4 text-left active:translate-y-[2px] active:scale-[0.99] transition-transform rise"
+            style={{
+              animationDelay: `${0.1 + i * 0.06}s`,
+              backgroundColor: BUZZER_COLORS[i % 4].bg,
+              boxShadow: `0 8px 0 ${BUZZER_COLORS[i % 4].shadow}, 0 12px 30px -8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
+              border: `1px solid ${BUZZER_COLORS[i % 4].border}`,
+            }}
+          >
+            <div className="flex items-center gap-4">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '1.25rem',
+                  backgroundColor: 'rgba(0,0,0,0.4)',
+                  color: BUZZER_COLORS[i % 4].badge,
+                  border: `2px solid ${BUZZER_COLORS[i % 4].badge}`,
+                }}
+              >
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span
+                className="flex-1 text-lg leading-tight"
+                style={{
+                  fontFamily: 'var(--font-serif)',
+                  fontWeight: 600,
+                  color: 'var(--color-paper)',
+                }}
+              >
+                {opt}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </Frame>
+  )
+}
+
+function IntermissionView({
+  wasCorrect,
+  correctAnswer,
+  score,
+  rank,
+  totalPlayers,
+}: {
+  wasCorrect: boolean
+  correctAnswer: string
+  score: number
+  rank: number | null
+  totalPlayers: number
+}) {
+  return (
+    <Frame>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <p
+          className={`mb-4 ${wasCorrect ? 'neon-text-amber' : 'neon-text-pink'} flicker`}
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: 'clamp(4rem, 20vw, 6.5rem)',
+            lineHeight: 0.9,
+          }}
+        >
+          {wasCorrect ? 'NICE' : 'OOF'}
+        </p>
+        <p className="chalk text-sm uppercase tracking-[0.35em] mb-2">
+          the answer was
+        </p>
+        <div
+          className="surface-paper rounded-sm px-6 py-4 mb-10 max-w-sm stamp"
+          style={{
+            boxShadow: '0 12px 28px -6px rgba(0,0,0,0.5)',
+          }}
+        >
+          <p
+            className="text-2xl leading-tight"
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 900,
+              color: 'var(--color-felt)',
+            }}
+          >
+            {correctAnswer}
+          </p>
+        </div>
+
+        <div className="flex items-baseline gap-6">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[color:var(--color-paper-dim)]">
+              score
+            </p>
+            <p
+              className="neon-text-amber"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '2.5rem',
+                fontWeight: 700,
+              }}
+            >
+              {score.toLocaleString()}
+            </p>
+          </div>
+          {rank !== null && (
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-[color:var(--color-paper-dim)]">
+                rank
+              </p>
+              <p
+                className="neon-text-pink"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '2.5rem',
+                  fontWeight: 700,
+                }}
+              >
+                {rank}
+                <span className="text-xl text-[color:var(--color-paper-dim)]">
+                  /{totalPlayers}
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Frame>
+  )
+}
+
+function FinalView({
+  rank,
+  score,
+  total,
+}: {
+  rank: number
+  score: number
+  total: number
+}) {
+  const medal = rank === 1 ? 'CHAMPION' : rank === 2 ? 'RUNNER-UP' : rank === 3 ? 'BRONZE' : 'THANKS FOR COMING'
+  return (
+    <Frame>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-3">
+          that's last call
+        </p>
+        <h1
+          className="flicker mb-6"
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: 'clamp(3.5rem, 18vw, 5.5rem)',
+            lineHeight: 0.9,
+          }}
+        >
+          <span className="neon-text-amber">CLOSING</span>
+          <br />
+          <span className="neon-text-pink">TIME</span>
+        </h1>
+
+        <p className="chalk text-sm uppercase tracking-[0.35em] mb-2">
+          you finished
+        </p>
+        <p
+          className="neon-text-amber mb-1"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '4.5rem',
+            lineHeight: 1,
+          }}
+        >
+          #{rank}
+        </p>
+        <p className="font-mono text-xs uppercase tracking-[0.3em] text-[color:var(--color-paper-dim)] mb-6">
+          of {total}
+        </p>
+
+        <div className="mb-8">
+          <p
+            className="neon-text-pink"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '1.25rem',
+              letterSpacing: '0.25em',
+            }}
+          >
+            {medal}
+          </p>
+        </div>
+
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-1">
+            final score
+          </p>
+          <p
+            className="neon-text-amber"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '2.5rem',
+              fontWeight: 700,
+            }}
+          >
+            {score.toLocaleString()}
+          </p>
+        </div>
+      </div>
+    </Frame>
+  )
+}
+
+function Centered({
+  children,
+  kicker,
+}: {
+  children: React.ReactNode
+  kicker: string
+}) {
+  return (
+    <Frame>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-3">
+          {kicker}
+        </p>
+        <p
+          className="text-2xl italic"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          {children}
+        </p>
+      </div>
+    </Frame>
+  )
+}
+
+const BUZZER_COLORS = [
+  {
+    bg: '#7a2135',
+    shadow: '#451020',
+    border: '#9a3249',
+    badge: '#ffb347',
+  },
+  {
+    bg: '#1e3a2d',
+    shadow: '#0d1f18',
+    border: '#2a5a44',
+    badge: '#ffb347',
+  },
+  {
+    bg: '#2a2439',
+    shadow: '#14101c',
+    border: '#3d3452',
+    badge: '#ff3d7f',
+  },
+  {
+    bg: '#3a2008',
+    shadow: '#1d1004',
+    border: '#56320f',
+    badge: '#ffb347',
+  },
+]
