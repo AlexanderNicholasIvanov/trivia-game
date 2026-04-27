@@ -37,6 +37,13 @@ if DIST_PATH.is_dir():
     if assets_dir.is_dir():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
+    # Mount large/streamable static directories explicitly so Starlette's
+    # StaticFiles handles HTTP Range requests (required for audio playback
+    # to start before the full file is downloaded).
+    audio_dir = DIST_PATH / "audio"
+    if audio_dir.is_dir():
+        app.mount("/audio", StaticFiles(directory=audio_dir), name="audio")
+
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str) -> FileResponse:
         # Serve a real file if one exists at that path (e.g. /vite.svg).
