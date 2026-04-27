@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { audio } from '../audio'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
@@ -92,10 +93,33 @@ export default function Play() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode, nickname])
 
+  // Duck the room ambience while a question is on screen.
+  useEffect(() => {
+    if (phase === 'round') audio.setDuck(0.3)
+    else audio.setDuck(1)
+    return () => {
+      audio.setDuck(1)
+    }
+  }, [phase])
+
+  // Reveal SFX: when the round ends, play correct/wrong based on local choice.
+  const prevCorrectAnswerRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!lastCorrectAnswer) return
+    if (lastCorrectAnswer === prevCorrectAnswerRef.current) return
+    prevCorrectAnswerRef.current = lastCorrectAnswer
+    if (submittedChoice && submittedChoice === lastCorrectAnswer) {
+      audio.correct()
+    } else {
+      audio.wrong()
+    }
+  }, [lastCorrectAnswer, submittedChoice])
+
   const submitAnswer = (choice: string) => {
     if (submittedChoice || !round) return
     const responseTime = Date.now() - round.startedAt
     setSubmittedChoice(choice)
+    audio.lock()
     socketRef.current?.send({
       type: 'submit_answer',
       choice,
@@ -280,9 +304,18 @@ function RoundView({
   const [timeLeft, setTimeLeft] = useState(round.durationSeconds)
 
   useEffect(() => {
+    let lastTickSecond = -1
     const tick = () => {
       const elapsed = (Date.now() - round.startedAt) / 1000
-      setTimeLeft(Math.max(0, Math.ceil(round.durationSeconds - elapsed)))
+      const seconds = Math.max(
+        0,
+        Math.ceil(round.durationSeconds - elapsed),
+      )
+      setTimeLeft(seconds)
+      if (seconds !== lastTickSecond) {
+        lastTickSecond = seconds
+        if (seconds > 0 && seconds <= 5) audio.tick()
+      }
     }
     tick()
     const interval = setInterval(tick, 200)

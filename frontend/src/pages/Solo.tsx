@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { audio } from '../audio'
 
 const ROUND_DURATION_SECONDS = 15
 const REVEAL_SECONDS = 3
@@ -93,6 +94,16 @@ export default function Solo() {
   const total = questions.length
   const current = questions[index]
 
+  // Duck the room ambience while a question is on screen so the timer
+  // tension lands harder. Restore it on reveal / final.
+  useEffect(() => {
+    if (phase === 'round') audio.setDuck(0.3)
+    else audio.setDuck(1)
+    return () => {
+      audio.setDuck(1)
+    }
+  }, [phase])
+
   const lockAnswer = (choice: string | null) => {
     if (!current || phase !== 'round') return
     const responseMs = Date.now() - startedAtRef.current
@@ -107,6 +118,9 @@ export default function Solo() {
       setBestStreak((b) => Math.max(b, next))
       return next
     })
+    if (choice !== null) audio.lock()
+    if (isCorrect) audio.correct()
+    else audio.wrong()
     setPhase('reveal')
   }
 
@@ -182,6 +196,7 @@ function RoundFrame({
   const [revealTimeLeft, setRevealTimeLeft] = useState(REVEAL_SECONDS)
   const onAnswerRef = useRef(onAnswer)
   const onAdvanceRef = useRef(onAdvance)
+  const lastTickSecondRef = useRef<number>(-1)
 
   useEffect(() => {
     onAnswerRef.current = onAnswer
@@ -194,7 +209,12 @@ function RoundFrame({
     const tick = () => {
       const elapsed = (Date.now() - startedAt) / 1000
       const remaining = Math.max(0, ROUND_DURATION_SECONDS - elapsed)
-      setTimeLeft(Math.ceil(remaining))
+      const seconds = Math.ceil(remaining)
+      setTimeLeft(seconds)
+      if (seconds !== lastTickSecondRef.current) {
+        lastTickSecondRef.current = seconds
+        if (seconds > 0 && seconds <= 5) audio.tick()
+      }
       if (remaining <= 0) {
         onAnswerRef.current(null)
       }

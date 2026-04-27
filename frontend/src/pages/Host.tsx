@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { audio } from '../audio'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
@@ -75,6 +76,15 @@ export default function Host() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Duck the room ambience while a question is on screen.
+  useEffect(() => {
+    if (phase === 'round') audio.setDuck(0.3)
+    else audio.setDuck(1)
+    return () => {
+      audio.setDuck(1)
+    }
+  }, [phase])
 
   const startGame = () => {
     socketRef.current?.send({ type: 'start_game' })
@@ -280,9 +290,18 @@ function RoundScreen({
   const [timeLeft, setTimeLeft] = useState(round.durationSeconds)
 
   useEffect(() => {
+    let lastTickSecond = -1
     const tick = () => {
       const elapsed = (Date.now() - round.startedAt) / 1000
-      setTimeLeft(Math.max(0, Math.ceil(round.durationSeconds - elapsed)))
+      const seconds = Math.max(
+        0,
+        Math.ceil(round.durationSeconds - elapsed),
+      )
+      setTimeLeft(seconds)
+      if (seconds !== lastTickSecond) {
+        lastTickSecond = seconds
+        if (seconds > 0 && seconds <= 5) audio.tick()
+      }
     }
     tick()
     const interval = setInterval(tick, 200)
