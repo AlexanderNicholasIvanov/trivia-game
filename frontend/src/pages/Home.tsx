@@ -112,15 +112,15 @@ export default function Home() {
             </button>
           </div>
 
-          <button
-            onClick={() => navigate('/solo')}
-            className="group mt-6 flex w-full items-center justify-center gap-3 chalk text-sm uppercase tracking-[0.35em] flicker-slow"
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            <span aria-hidden className="opacity-60">—</span>
-            no friends tonight? play solo →
-            <span aria-hidden className="opacity-60">—</span>
-          </button>
+        </div>
+
+        <div
+          className="mt-12 w-full rise"
+          style={{ animationDelay: '0.6s' }}
+        >
+          <ChalkDivider>side door</ChalkDivider>
+
+          <SoloCoaster onClick={() => navigate('/solo')} />
         </div>
 
         <div className="mt-16 flex items-center gap-3 text-[color:var(--color-paper-dim)] rise" style={{ animationDelay: '0.8s' }}>
@@ -132,6 +132,116 @@ export default function Home() {
         </div>
       </main>
     </div>
+  )
+}
+
+function SoloCoaster({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative mt-6 block w-full text-left"
+      style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+      aria-label="Fly solo — start a single-player game"
+    >
+      {/* Underglow on hover */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-2 -z-10 rounded-full opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        style={{ backgroundColor: 'rgba(255,179,71,0.35)' }}
+      />
+
+      <div
+        className="surface-paper relative px-7 py-6 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:rotate-[-2.4deg] group-active:translate-y-0.5"
+        style={{
+          transform: 'rotate(-2deg)',
+          boxShadow:
+            '0 22px 44px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.35), inset 0 0 60px rgba(205,192,154,0.25)',
+        }}
+      >
+        {/* Bookmark / corner punch */}
+        <span
+          aria-hidden
+          className="absolute -top-3 right-6 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.3em] text-[color:var(--color-paper)]"
+          style={{
+            backgroundColor: 'var(--color-felt-deep)',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.35)',
+            transform: 'rotate(3deg)',
+          }}
+        >
+          bar seat
+        </span>
+
+        {/* Stamp lockup */}
+        <div className="flex flex-col items-center text-center">
+          <p
+            className="font-mono uppercase tracking-[0.45em] text-[10px] mb-1"
+            style={{ color: 'var(--color-amber-deep)' }}
+          >
+            ◆ table for one ◆
+          </p>
+          <p
+            className="leading-[0.85]"
+            style={{
+              fontFamily: 'var(--font-shade)',
+              fontSize: 'clamp(2.6rem, 13vw, 3.4rem)',
+              color: 'var(--color-felt-deep)',
+              letterSpacing: '0.04em',
+              textShadow:
+                '2px 2px 0 rgba(122,31,46,0.18), -1px -1px 0 rgba(255,179,71,0.25)',
+            }}
+          >
+            FLY
+            <br />
+            SOLO
+          </p>
+          <p
+            className="mt-3 italic"
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              color: 'var(--color-felt)',
+            }}
+          >
+            no audience required.
+          </p>
+          <p
+            className="mt-3 font-mono uppercase tracking-[0.3em]"
+            style={{ fontSize: '0.6rem', color: 'var(--color-amber-deep)' }}
+          >
+            ten rounds · fifteen seconds · one shot
+          </p>
+        </div>
+
+        {/* Worn red ink stamp arrow in corner */}
+        <span
+          aria-hidden
+          className="absolute bottom-3 right-4 select-none"
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: '1.1rem',
+            color: 'rgba(122,31,46,0.7)',
+            transform: 'rotate(8deg)',
+            letterSpacing: '0.1em',
+          }}
+        >
+          →
+        </span>
+        <span
+          aria-hidden
+          className="absolute top-3 left-4 select-none"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.55rem',
+            color: 'rgba(122,31,46,0.55)',
+            transform: 'rotate(-4deg)',
+            letterSpacing: '0.2em',
+          }}
+        >
+          ✸ HOUSE ✸
+        </span>
+      </div>
+    </button>
   )
 }
 

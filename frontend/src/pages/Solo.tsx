@@ -224,27 +224,57 @@ function RoundFrame({
   return (
     <Stage>
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl flex-col px-5 py-6">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)]">
+        {/* Mode header lockup */}
+        <div className="mb-5 flex items-end justify-between gap-3">
+          <div className="flex flex-col">
             <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{
-                backgroundColor: 'var(--color-amber)',
-                boxShadow:
-                  '0 0 8px rgba(255,179,71,0.9), 0 0 18px rgba(255,179,71,0.5)',
-              }}
-            />
-            <span>solo set</span>
-          </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-[color:var(--color-paper-dim)]">
-            R{String(index + 1).padStart(2, '0')}
-            <span className="mx-1 text-[color:var(--color-paper-dim)] opacity-60">
-              /
+              className="font-mono text-[9px] uppercase tracking-[0.5em] text-[color:var(--color-paper-dim)]"
+            >
+              vs. the house
             </span>
-            {String(total).padStart(2, '0')}
-          </span>
+            <span
+              className="neon-text-amber flicker-slow"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.1rem',
+                letterSpacing: '0.18em',
+                lineHeight: 1,
+              }}
+            >
+              FLY SOLO
+            </span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="font-mono text-[9px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)]">
+              round
+            </span>
+            <span
+              className="neon-text-pink"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                lineHeight: 1,
+              }}
+            >
+              {String(index + 1).padStart(2, '0')}
+              <span className="text-[color:var(--color-paper-dim)] opacity-50 mx-0.5">
+                /
+              </span>
+              {String(total).padStart(2, '0')}
+            </span>
+          </div>
         </div>
+
+        {/* Brass rule under header */}
+        <div
+          className="mb-6 h-px w-full"
+          style={{
+            backgroundImage:
+              'linear-gradient(90deg, transparent, rgba(193,154,73,0.55) 18%, rgba(193,154,73,0.55) 82%, transparent)',
+          }}
+        />
 
         {/* Score & streak strip */}
         <div className="mb-5 flex items-baseline justify-between gap-4">
@@ -631,20 +661,54 @@ function FinalScreen({
 }
 
 function Loading() {
+  // 3 stacked paper "cards" with offsets for a shuffled-deck feel
   return (
     <Stage>
-      <div className="flex min-h-screen items-center justify-center px-5 text-center">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.45em] text-[color:var(--color-paper-dim)] mb-3 flicker-slow">
-            shuffling the deck
-          </p>
-          <p
-            className="chalk text-3xl italic flicker"
-            style={{ fontFamily: 'var(--font-serif)' }}
-          >
-            pouring you a flight&hellip;
-          </p>
+      <div className="flex min-h-screen flex-col items-center justify-center px-5 text-center">
+        <div
+          className="relative mb-10"
+          style={{ width: '14rem', height: '9rem' }}
+        >
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="surface-paper absolute inset-0 rise"
+              style={{
+                animationDelay: `${0.05 + i * 0.12}s`,
+                transform: `rotate(${(i - 1) * 4}deg) translateY(${i * 2}px)`,
+                boxShadow: '0 12px 30px -8px rgba(0,0,0,0.6)',
+                opacity: 1 - i * 0.1,
+              }}
+            >
+              <div
+                className="absolute inset-3"
+                style={{
+                  border: '1px dashed rgba(0,0,0,0.25)',
+                }}
+              />
+              <p
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  fontFamily: 'var(--font-shade)',
+                  fontSize: '2.2rem',
+                  color: 'var(--color-felt-deep)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                ?
+              </p>
+            </div>
+          ))}
         </div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-[color:var(--color-paper-dim)] mb-2 flicker-slow">
+          shuffling the deck
+        </p>
+        <p
+          className="chalk text-2xl italic flicker"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          pouring you a flight&hellip;
+        </p>
       </div>
     </Stage>
   )
