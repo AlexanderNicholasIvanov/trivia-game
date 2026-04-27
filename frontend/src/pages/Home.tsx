@@ -111,6 +111,16 @@ export default function Home() {
               </span>
             </button>
           </div>
+
+          <button
+            onClick={() => navigate('/solo')}
+            className="group mt-6 flex w-full items-center justify-center gap-3 chalk text-sm uppercase tracking-[0.35em] flicker-slow"
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <span aria-hidden className="opacity-60">—</span>
+            no friends tonight? play solo →
+            <span aria-hidden className="opacity-60">—</span>
+          </button>
         </div>
 
         <div className="mt-16 flex items-center gap-3 text-[color:var(--color-paper-dim)] rise" style={{ animationDelay: '0.8s' }}>

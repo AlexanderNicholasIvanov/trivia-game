@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.solo import router as solo_router
 from app.websockets import router as ws_router
 
 app = FastAPI(title="Trivia Game API", version="0.1.0")
@@ -19,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(ws_router)
+app.include_router(solo_router)
 
 
 @app.get("/health")
