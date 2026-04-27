@@ -1,20 +1,20 @@
 /**
- * Audio engine for the bar room ambience and game SFX.
+ * Audio engine for the bar room music and game SFX.
  *
  * Music: a small playlist of CC0 public-domain piano jazz from the
- * Internet Archive (1927-1946 78rpm transfers). The recordings carry their
- * own surface hiss and crackle, which gives us the late-night dim-bar feel
- * for free. We add an occasional procedural glass clink on top so the room
- * feels alive between tracks.
+ * Internet Archive (1927-1946 78rpm transfers). Plays through a plain
+ * HTMLAudioElement so it doesn't depend on the AudioContext being
+ * resumed in the same tick as the user gesture — this is the most
+ * autoplay-resilient pattern.
  *
- * SFX (lock, correct, wrong, tick) are synthesised with the Web Audio API
- * and routed through a dedicated bus so they stay punchy when the music is
- * ducked during a round.
+ * SFX (lock, correct, wrong, tick) are synthesised with the Web Audio
+ * API and routed through a dedicated bus so they stay punchy when the
+ * music ducks during a round.
  */
 
 const MUTE_KEY = 'theregulars-club:muted'
 
-const MUSIC_GAIN = 0.5 // ambience bus base level when fully un-ducked
+const MUSIC_VOLUME = 0.55 // base HTMLAudio volume when fully un-ducked
 const SFX_GAIN = 0.55
 
 const MUSIC_TRACKS = [
@@ -53,63 +53,67 @@ function shuffled<T>(input: readonly T[]): T[] {
 }
 
 class AudioEngine {
+  // SFX uses Web Audio (synthesis); music uses plain HTMLAudio.
   private ctx: AudioContext | null = null
-  private master: GainNode | null = null
-  private musicBus: GainNode | null = null
   private sfxBus: GainNode | null = null
+
   private musicEl: HTMLAudioElement | null = null
   private musicStarted = false
   private playOrder: string[] = []
   private playIndex = 0
-  private muted = readMutePref()
-  private subscribers = new Set<() => void>()
-  private clinkTimer: ReturnType<typeof setTimeout> | null = null
 
-  /** Lazily create the AudioContext. Called on first user gesture. */
-  private ensure(): AudioContext | null {
+  private muted = readMutePref()
+  private duckLevel = 1
+  private subscribers = new Set<() => void>()
+
+  private clinkTimer: ReturnType<typeof setTimeout> | null = null
+  private rampTimer: ReturnType<typeof setInterval> | null = null
+
+  /** Lazily create the AudioContext for SFX. */
+  private ensureSfx(): AudioContext | null {
     if (this.ctx) return this.ctx
     if (typeof window === 'undefined') return null
     const w = window as WindowWithWebkit
     const Ctor = window.AudioContext ?? w.webkitAudioContext
     if (!Ctor) return null
     const ctx = new Ctor()
-
-    const master = ctx.createGain()
-    master.gain.value = this.muted ? 0 : 1
-    master.connect(ctx.destination)
-
-    const music = ctx.createGain()
-    music.gain.value = MUSIC_GAIN
-    music.connect(master)
-
     const sfx = ctx.createGain()
-    sfx.gain.value = SFX_GAIN
-    sfx.connect(master)
-
+    sfx.gain.value = this.muted ? 0 : SFX_GAIN
+    sfx.connect(ctx.destination)
     this.ctx = ctx
-    this.master = master
-    this.musicBus = music
     this.sfxBus = sfx
     return ctx
   }
 
   /**
-   * Resume the audio context (must be called from a user gesture in
-   * Chrome/Safari) and start the music playlist if not already running.
+   * Resume the audio context and start the music playlist. Safe to call
+   * repeatedly — does work only on the first call. Must be invoked from
+   * a user gesture for autoplay-locked browsers.
    */
   unlock(): void {
-    const ctx = this.ensure()
-    if (!ctx) return
-    if (ctx.state === 'suspended') {
+    const ctx = this.ensureSfx()
+    if (ctx && ctx.state === 'suspended') {
       void ctx.resume().catch(() => {
-        /* ignore — best effort */
+        /* best effort */
       })
     }
     if (!this.musicStarted) {
       this.startMusic()
       this.scheduleClink()
       this.musicStarted = true
+    } else if (this.musicEl && this.musicEl.paused) {
+      // Some browsers occasionally drop playback (tab backgrounded etc.).
+      // Re-attempt on subsequent gestures.
+      void this.musicEl.play().catch(() => {
+        /* still locked — try again next gesture */
+      })
     }
+  }
+
+  /** True once the music element is actually playing (not paused). */
+  isPlayingMusic(): boolean {
+    const el = this.musicEl
+    return !!el && !el.paused && !el.ended
   }
 
   isMuted(): boolean {
@@ -119,28 +123,21 @@ class AudioEngine {
   setMuted(muted: boolean): void {
     this.muted = muted
     writeMutePref(muted)
+    this.applyMusicVolume(true)
     const ctx = this.ctx
-    const master = this.master
-    if (ctx && master) {
+    const bus = this.sfxBus
+    if (ctx && bus) {
       const now = ctx.currentTime
-      master.gain.cancelScheduledValues(now)
-      master.gain.linearRampToValueAtTime(muted ? 0 : 1, now + 0.25)
+      bus.gain.cancelScheduledValues(now)
+      bus.gain.linearRampToValueAtTime(muted ? 0 : SFX_GAIN, now + 0.25)
     }
     this.notify()
   }
 
-  /**
-   * Duck the music bus by a factor in [0, 1]. 1 = full music, 0 = silent.
-   * SFX bus is unaffected, so reveals/ticks stay punchy under the duck.
-   */
+  /** Duck the music by a factor in [0, 1]. SFX bus is unaffected. */
   setDuck(level: number): void {
-    const clamped = Math.max(0, Math.min(1, level))
-    const ctx = this.ctx
-    const bus = this.musicBus
-    if (!ctx || !bus) return
-    const now = ctx.currentTime
-    bus.gain.cancelScheduledValues(now)
-    bus.gain.linearRampToValueAtTime(MUSIC_GAIN * clamped, now + 0.4)
+    this.duckLevel = Math.max(0, Math.min(1, level))
+    this.applyMusicVolume(false)
   }
 
   subscribe(listener: () => void): () => void {
@@ -153,24 +150,11 @@ class AudioEngine {
   // -- music ----------------------------------------------------------------
 
   private startMusic(): void {
-    const ctx = this.ctx
-    const bus = this.musicBus
-    if (!ctx || !bus) return
-
     const el = new Audio()
     el.preload = 'auto'
-    el.crossOrigin = 'anonymous'
-
-    // Pipe the HTML media element through the music bus so duck/mute apply.
-    const source = ctx.createMediaElementSource(el)
-    source.connect(bus)
-
+    el.volume = this.muted ? 0 : MUSIC_VOLUME * this.duckLevel
     el.addEventListener('ended', () => this.advanceTrack())
-    el.addEventListener('error', () => {
-      // Skip a bad track instead of getting stuck on it.
-      this.advanceTrack()
-    })
-
+    el.addEventListener('error', () => this.advanceTrack())
     this.musicEl = el
     this.playOrder = shuffled(MUSIC_TRACKS)
     this.playIndex = 0
@@ -183,16 +167,46 @@ class AudioEngine {
     const src = this.playOrder[this.playIndex % this.playOrder.length]
     this.playIndex += 1
     el.src = src
-    el.play().catch(() => {
-      // Autoplay was rejected (e.g. user gesture not yet registered). The
-      // outer `unlock()` flow handles this; we just bail quietly.
+    void el.play().catch(() => {
+      // Autoplay still locked — caller will retry on next gesture.
     })
+  }
+
+  private applyMusicVolume(instant: boolean): void {
+    const el = this.musicEl
+    if (!el) return
+    const target = this.muted ? 0 : MUSIC_VOLUME * this.duckLevel
+    if (instant) {
+      el.volume = target
+      return
+    }
+    if (this.rampTimer !== null) {
+      clearInterval(this.rampTimer)
+      this.rampTimer = null
+    }
+    const startVol = el.volume
+    const startTime = Date.now()
+    const durationMs = 400
+    if (Math.abs(startVol - target) < 0.005) {
+      el.volume = target
+      return
+    }
+    this.rampTimer = setInterval(() => {
+      if (!this.musicEl) return
+      const t = Math.min(1, (Date.now() - startTime) / durationMs)
+      this.musicEl.volume = startVol + (target - startVol) * t
+      if (t >= 1) {
+        if (this.rampTimer !== null) {
+          clearInterval(this.rampTimer)
+          this.rampTimer = null
+        }
+      }
+    }, 16)
   }
 
   // -- room events ----------------------------------------------------------
 
   private scheduleClink(): void {
-    // 20-50 seconds between clinks — sparse, not a metronome.
     const delayMs = 20000 + Math.random() * 30000
     this.clinkTimer = setTimeout(() => {
       this.emitClink()
@@ -202,8 +216,8 @@ class AudioEngine {
 
   private emitClink(): void {
     const ctx = this.ctx
-    const bus = this.musicBus
-    if (!ctx || !bus) return
+    const bus = this.sfxBus
+    if (!ctx || !bus || this.muted) return
     const now = ctx.currentTime
     const baseFreq = 900 + Math.random() * 700
     for (const detune of [0, 8.4]) {
@@ -294,7 +308,7 @@ class AudioEngine {
     const bus = this.sfxBus
     if (!ctx || !bus || this.muted) return
     const now = ctx.currentTime
-    const baseFreqs = [220, 233.08] // whole step apart → beating
+    const baseFreqs = [220, 233.08]
     baseFreqs.forEach((freq) => {
       const osc = ctx.createOscillator()
       osc.type = 'sawtooth'
@@ -332,14 +346,13 @@ class AudioEngine {
   /** Stop everything (used in tests / hot reload). */
   dispose(): void {
     if (this.clinkTimer) clearTimeout(this.clinkTimer)
+    if (this.rampTimer) clearInterval(this.rampTimer)
     this.musicEl?.pause()
     this.musicEl = null
     this.ctx?.close().catch(() => {
       /* noop */
     })
     this.ctx = null
-    this.master = null
-    this.musicBus = null
     this.sfxBus = null
     this.musicStarted = false
   }

@@ -9,22 +9,25 @@ import Solo from './pages/Solo'
 import './App.css'
 
 export default function App() {
-  // Browsers block autoplay until the user interacts with the page. Catch the
-  // first click or keypress anywhere and unlock the audio context once.
+  // Browsers block autoplay until the user interacts with the page. Try to
+  // unlock on every user gesture and only stop once music is actually
+  // playing — some browsers reject the first play() even from a real click.
   useEffect(() => {
-    let unlocked = false
-    const unlock = () => {
-      if (unlocked) return
-      unlocked = true
+    const tryUnlock = () => {
       audio.unlock()
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+      if (audio.isPlayingMusic()) {
+        window.removeEventListener('pointerdown', tryUnlock)
+        window.removeEventListener('keydown', tryUnlock)
+        window.removeEventListener('touchend', tryUnlock)
+      }
     }
-    window.addEventListener('pointerdown', unlock)
-    window.addEventListener('keydown', unlock)
+    window.addEventListener('pointerdown', tryUnlock)
+    window.addEventListener('keydown', tryUnlock)
+    window.addEventListener('touchend', tryUnlock)
     return () => {
-      window.removeEventListener('pointerdown', unlock)
-      window.removeEventListener('keydown', unlock)
+      window.removeEventListener('pointerdown', tryUnlock)
+      window.removeEventListener('keydown', tryUnlock)
+      window.removeEventListener('touchend', tryUnlock)
     }
   }, [])
 
