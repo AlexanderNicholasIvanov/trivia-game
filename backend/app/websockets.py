@@ -4,9 +4,12 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
+from app.config import settings
 from app.database import SessionLocal
 from app.game import run_game
+from app.models import Game, GameStatus
 from app.rooms import manager
 from app.schemas import (
     ErrorMessage,
@@ -16,6 +19,7 @@ from app.schemas import (
     PlayerJoined,
     PlayerLeft,
     RoomCreated,
+    SubmitAnswerMessage,
 )
 
 router = APIRouter()
@@ -23,10 +27,41 @@ router = APIRouter()
 
 MAX_NICKNAME_LEN = 20
 
+# WebSocket close code for policy violation (origin not allowed).
+WS_POLICY_VIOLATION = 1008
+
+
+def _origin_allowed(websocket: WebSocket) -> bool:
+    """Check the WS upgrade `Origin` header against the configured allowlist.
+
+    The CORS HTTP middleware does not cover WebSocket upgrades, so we enforce
+    the same allowlist here. Same-origin requests (Origin matches the request
+    host) are always allowed.
+    """
+    allowed = settings.cors_origins_list
+    origin = websocket.headers.get("origin")
+    if origin is None:
+        # Non-browser clients (curl, native apps, tests) don't send Origin.
+        return True
+    if not allowed:
+        return True
+    if origin in allowed:
+        return True
+    # Same-origin: scheme://host[:port] of the request equals Origin.
+    request_host = websocket.headers.get("host")
+    if request_host is not None:
+        scheme = "https" if websocket.url.scheme == "wss" else "http"
+        if origin == f"{scheme}://{request_host}":
+            return True
+    return False
+
 
 @router.websocket("/ws/host")
 async def websocket_host(websocket: WebSocket) -> None:
     """Host connects to create a new game room."""
+    if not _origin_allowed(websocket):
+        await websocket.close(code=WS_POLICY_VIOLATION)
+        return
     await websocket.accept()
     db = SessionLocal()
     try:
@@ -83,6 +118,9 @@ async def websocket_play(
     nickname: str = Query(..., min_length=1, max_length=MAX_NICKNAME_LEN),
 ) -> None:
     """Player connects to join an existing room."""
+    if not _origin_allowed(websocket):
+        await websocket.close(code=WS_POLICY_VIOLATION)
+        return
     await websocket.accept()
 
     room = manager.get(room_code)
@@ -101,6 +139,19 @@ async def websocket_play(
         )
         await websocket.close()
         return
+
+    # Reject joins for any game that's already past the lobby phase.
+    status_db = SessionLocal()
+    try:
+        game = status_db.get(Game, room.game_id)
+        if game is None or game.status != GameStatus.LOBBY:
+            await websocket.send_json(
+                ErrorMessage(message="Game is no longer accepting players").model_dump()
+            )
+            await websocket.close()
+            return
+    finally:
+        status_db.close()
 
     db = SessionLocal()
     player = None
@@ -137,26 +188,28 @@ async def websocket_play(
             if msg_type == "ping":
                 await websocket.send_json({"type": "pong"})
             elif msg_type == "submit_answer":
-                # Only accept if a round is in progress and player hasn't answered yet
                 if room.current_round_id is None:
                     await websocket.send_json(
                         ErrorMessage(message="No active round").model_dump()
                     )
                     continue
-                current_answers = room.current_answers
-                if player.id in current_answers:
+                if player.id in room.current_answers:
                     await websocket.send_json(
                         ErrorMessage(message="You already answered this round").model_dump()
                     )
                     continue
-                choice = data.get("choice")
-                response_time_ms = int(data.get("response_time_ms", 0))
-                if not isinstance(choice, str):
+                try:
+                    parsed = SubmitAnswerMessage.model_validate(data)
+                except ValidationError as exc:
+                    first_error = exc.errors()[0]
+                    field = ".".join(str(p) for p in first_error["loc"])
                     await websocket.send_json(
-                        ErrorMessage(message="Invalid choice").model_dump()
+                        ErrorMessage(
+                            message=f"Invalid submit_answer ({field}): {first_error['msg']}"
+                        ).model_dump()
                     )
                     continue
-                current_answers[player.id] = (choice, response_time_ms)
+                room.current_answers[player.id] = (parsed.choice, parsed.response_time_ms)
             else:
                 await websocket.send_json(
                     ErrorMessage(message=f"Unknown message type: {msg_type}").model_dump()

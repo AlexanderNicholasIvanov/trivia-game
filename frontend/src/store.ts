@@ -57,10 +57,13 @@ export const useStore = create<Store>((set) => ({
     set({
       lastCorrectAnswer: correct,
       leaderboard,
+      // Keep `players` in sync with the authoritative scores so the player
+      // intermission view doesn't show a stale (zero) score.
+      players: leaderboard,
       phase: 'intermission',
     }),
   endGame: (leaderboard) =>
-    set({ leaderboard, phase: 'finished' }),
+    set({ leaderboard, players: leaderboard, phase: 'finished' }),
   setError: (error) => set({ error }),
   reset: () => set(initialState),
 }))

@@ -54,7 +54,7 @@ class StartGameMessage(BaseModel):
 
 class SubmitAnswerMessage(BaseModel):
     type: Literal["submit_answer"]
-    choice: str
+    choice: str = Field(min_length=1, max_length=256)
     response_time_ms: int = Field(ge=0)
 
 

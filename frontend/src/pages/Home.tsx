@@ -82,6 +82,7 @@ export default function Home() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value.slice(0, 20))}
                 placeholder="who's asking"
+                maxLength={20}
                 className="block w-full rounded-sm border bg-[color:var(--color-ink-soft)] px-4 py-3 text-lg italic outline-none transition focus:border-[color:var(--color-neon)]"
                 style={{
                   fontFamily: 'var(--font-serif)',

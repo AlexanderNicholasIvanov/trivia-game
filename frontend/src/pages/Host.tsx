@@ -14,6 +14,7 @@ export default function Host() {
     round,
     lastCorrectAnswer,
     leaderboard,
+    error,
     setRoom,
     setPlayers,
     setRound,
@@ -59,10 +60,17 @@ export default function Host() {
       }
     })
 
+    const unsubClose = socket.onClose(() => {
+      if (!useStore.getState().error) {
+        setError('Connection lost. The bar is empty.')
+      }
+    })
+
     socket.connect().then(() => setConnected(true)).catch(console.error)
 
     return () => {
       unsub()
+      unsubClose()
       socket.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,6 +78,18 @@ export default function Host() {
 
   const startGame = () => {
     socketRef.current?.send({ type: 'start_game' })
+  }
+
+  if (error) {
+    return (
+      <StageFrame>
+        <div className="flex h-full items-center justify-center">
+          <div className="chalk text-2xl tracking-[0.3em] uppercase flicker neon-text-pink">
+            {error}
+          </div>
+        </div>
+      </StageFrame>
+    )
   }
 
   if (!connected || !roomCode) {

@@ -76,10 +76,17 @@ export default function Play() {
       }
     })
 
+    const unsubClose = socket.onClose(() => {
+      if (!useStore.getState().error) {
+        setError('Connection lost. Refresh to try again.')
+      }
+    })
+
     socket.connect().then(() => setConnected(true)).catch(console.error)
 
     return () => {
       unsub()
+      unsubClose()
       socket.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,8 +150,14 @@ export default function Play() {
 
   if (phase === 'finished') {
     const myRank = leaderboard.findIndex((p) => p.id === selfPlayerId)
-    const me = leaderboard[myRank]
-    return <FinalView rank={myRank + 1} score={me?.score ?? 0} total={leaderboard.length} />
+    const me = myRank >= 0 ? leaderboard[myRank] : undefined
+    return (
+      <FinalView
+        rank={myRank >= 0 ? myRank + 1 : null}
+        score={me?.score ?? 0}
+        total={leaderboard.length}
+      />
+    )
   }
 
   return <Centered kicker="huh">Still loading&hellip;</Centered>
@@ -371,7 +384,11 @@ function RoundView({
           <div
             className="h-full transition-[width] duration-300 ease-linear"
             style={{
-              width: `${(timeLeft / round.durationSeconds) * 100}%`,
+              width: `${
+                round.durationSeconds > 0
+                  ? (timeLeft / round.durationSeconds) * 100
+                  : 0
+              }%`,
               backgroundColor: urgent
                 ? 'var(--color-neon)'
                 : 'var(--color-amber)',
@@ -543,11 +560,18 @@ function FinalView({
   score,
   total,
 }: {
-  rank: number
+  rank: number | null
   score: number
   total: number
 }) {
-  const medal = rank === 1 ? 'CHAMPION' : rank === 2 ? 'RUNNER-UP' : rank === 3 ? 'BRONZE' : 'THANKS FOR COMING'
+  const medal =
+    rank === 1
+      ? 'CHAMPION'
+      : rank === 2
+      ? 'RUNNER-UP'
+      : rank === 3
+      ? 'BRONZE'
+      : 'THANKS FOR COMING'
   return (
     <Frame>
       <div className="flex flex-1 flex-col items-center justify-center text-center">
@@ -578,10 +602,10 @@ function FinalView({
             lineHeight: 1,
           }}
         >
-          #{rank}
+          {rank !== null ? `#${rank}` : '—'}
         </p>
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-[color:var(--color-paper-dim)] mb-6">
-          of {total}
+          {rank !== null ? `of ${total}` : 'unranked'}
         </p>
 
         <div className="mb-8">
