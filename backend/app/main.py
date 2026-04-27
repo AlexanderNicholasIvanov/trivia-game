@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.websockets import router as ws_router
@@ -20,3 +24,22 @@ app.include_router(ws_router)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# Serve the built frontend if it was bundled into the image. The Dockerfile
+# copies `frontend/dist/` to `<repo>/frontend_dist/`; in local dev that
+# directory does not exist and the frontend runs on Vite separately.
+DIST_PATH = Path(__file__).resolve().parent.parent.parent / "frontend_dist"
+if DIST_PATH.is_dir():
+    assets_dir = DIST_PATH / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str) -> FileResponse:
+        # Serve a real file if one exists at that path (e.g. /vite.svg).
+        candidate = DIST_PATH / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        # Otherwise serve the SPA shell so client-side routing works.
+        return FileResponse(DIST_PATH / "index.html")

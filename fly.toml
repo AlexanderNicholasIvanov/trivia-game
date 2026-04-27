@@ -1,0 +1,30 @@
+# Fly.io config for theregulars.club
+# `fly launch` may rename the app if "theregulars-club" is taken globally.
+
+app = "theregulars-club"
+primary_region = "iad"
+
+[build]
+
+[env]
+  DATABASE_URL = "sqlite:////data/trivia.db"
+  CORS_ORIGINS = "https://theregulars.club"
+
+[[mounts]]
+  source = "trivia_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[deploy]
+  release_command = "alembic upgrade head"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

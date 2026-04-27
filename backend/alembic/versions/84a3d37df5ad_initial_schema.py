@@ -26,7 +26,7 @@ def upgrade() -> None:
     sa.Column('status', sa.Enum('LOBBY', 'IN_PROGRESS', 'FINISHED', name='game_status'), nullable=False),
     sa.Column('current_round', sa.Integer(), nullable=False),
     sa.Column('total_rounds', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_games_room_code'), 'games', ['room_code'], unique=True)
@@ -56,7 +56,7 @@ def upgrade() -> None:
     sa.Column('game_id', sa.Integer(), nullable=False),
     sa.Column('nickname', sa.String(length=32), nullable=False),
     sa.Column('score', sa.Integer(), nullable=False),
-    sa.Column('joined_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('joined_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
     sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -68,7 +68,7 @@ def upgrade() -> None:
     sa.Column('is_correct', sa.Boolean(), nullable=False),
     sa.Column('response_time_ms', sa.Integer(), nullable=False),
     sa.Column('points_awarded', sa.Integer(), nullable=False),
-    sa.Column('submitted_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('submitted_at', sa.DateTime(), server_default=sa.func.now(), nullable=False),
     sa.ForeignKeyConstraint(['player_id'], ['players.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['round_id'], ['game_rounds.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')

@@ -1,0 +1,19 @@
+.git
+.github
+.DS_Store
+**/.DS_Store
+README.md
+dev.sh
+
+# Backend artifacts
+backend/.venv
+backend/.env
+backend/.pytest_cache
+backend/.ruff_cache
+backend/**/__pycache__
+backend/tests
+
+# Frontend artifacts
+frontend/node_modules
+frontend/dist
+frontend/.env*
