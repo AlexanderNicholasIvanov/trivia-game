@@ -1,16 +1,23 @@
 import { useSyncExternalStore } from 'react'
 import { audio } from '../audio'
 
-function getSnapshot(): boolean {
-  return audio.isMuted()
+function getSnapshot(): 'muted' | 'on-air' | 'waiting' {
+  return audio.getState()
+}
+
+const LABELS: Record<'muted' | 'on-air' | 'waiting', string> = {
+  muted: '◌ silence',
+  'on-air': '♪ on air',
+  waiting: '♪ tap anywhere',
 }
 
 export default function MuteToggle() {
-  const muted = useSyncExternalStore(
+  const state = useSyncExternalStore(
     (cb) => audio.subscribe(cb),
     getSnapshot,
     getSnapshot,
   )
+  const muted = state === 'muted'
 
   return (
     <button
@@ -18,8 +25,8 @@ export default function MuteToggle() {
       aria-label={muted ? 'Unmute room ambience' : 'Mute room ambience'}
       aria-pressed={!muted}
       onClick={() => {
-        // Clicking the toggle also counts as a user gesture, so unlock the
-        // audio context if the page hasn't done it elsewhere yet.
+        // Clicking the toggle is itself a user gesture, so unlock the audio
+        // context if the page hasn't done it elsewhere yet.
         audio.unlock()
         audio.setMuted(!muted)
       }}
@@ -32,17 +39,23 @@ export default function MuteToggle() {
       }}
     >
       <span
-        className="font-mono text-[10px] uppercase tracking-[0.4em] opacity-70 group-hover:opacity-100 transition-opacity"
+        className={`font-mono text-[10px] uppercase tracking-[0.4em] transition-opacity ${
+          state === 'waiting'
+            ? 'opacity-90 flicker-slow'
+            : 'opacity-70 group-hover:opacity-100'
+        }`}
         style={{
-          color: muted
-            ? 'var(--color-paper-dim)'
-            : 'var(--color-amber)',
-          textShadow: muted
-            ? 'none'
-            : '0 0 6px rgba(255,179,71,0.6), 0 0 14px rgba(255,179,71,0.3)',
+          color:
+            state === 'muted'
+              ? 'var(--color-paper-dim)'
+              : 'var(--color-amber)',
+          textShadow:
+            state === 'muted'
+              ? 'none'
+              : '0 0 6px rgba(255,179,71,0.6), 0 0 14px rgba(255,179,71,0.3)',
         }}
       >
-        {muted ? '◌ silence' : '♪ on air'}
+        {LABELS[state]}
       </span>
     </button>
   )

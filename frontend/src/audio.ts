@@ -120,6 +120,20 @@ class AudioEngine {
     return this.muted
   }
 
+  /**
+   * Coarse public state for UI.
+   *  - 'muted'    user has the toggle off
+   *  - 'on-air'   music is actually playing
+   *  - 'waiting'  unmuted but no user gesture yet (or playback failed)
+   */
+  getState(): 'muted' | 'on-air' | 'waiting' {
+    if (this.muted) return 'muted'
+    if (this.musicEl && !this.musicEl.paused && !this.musicEl.ended) {
+      return 'on-air'
+    }
+    return 'waiting'
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted
     writeMutePref(muted)
@@ -155,6 +169,8 @@ class AudioEngine {
     el.volume = this.muted ? 0 : MUSIC_VOLUME * this.duckLevel
     el.addEventListener('ended', () => this.advanceTrack())
     el.addEventListener('error', () => this.advanceTrack())
+    el.addEventListener('playing', () => this.notify())
+    el.addEventListener('pause', () => this.notify())
     this.musicEl = el
     this.playOrder = shuffled(MUSIC_TRACKS)
     this.playIndex = 0
