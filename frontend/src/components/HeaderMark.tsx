@@ -55,18 +55,9 @@ export default function HeaderMark() {
     </span>
   )
 
-  // On the home page, render as a non-link decorative mark; everywhere else,
-  // link back to the menu.
-  if (isHome) {
-    return (
-      <div
-        className="absolute top-2 left-1/2 z-40 -translate-x-1/2 select-none"
-        aria-label="The Regulars Club"
-      >
-        {mark}
-      </div>
-    )
-  }
+  // On the home page the giant flanking question marks already do the
+  // brand work — skip the corner badge entirely.
+  if (isHome) return null
 
   return (
     <Link

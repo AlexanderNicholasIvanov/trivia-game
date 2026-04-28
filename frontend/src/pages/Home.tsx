@@ -17,13 +17,49 @@ export default function Home() {
           &mdash; every Thursday, 8pm &mdash;
         </p>
 
-        <h1
-          className="text-center leading-[0.85] mb-1 rise"
-          style={{ animationDelay: '0.15s', fontFamily: 'var(--font-display)' }}
+        <div
+          className="flex w-full items-center justify-center gap-2 sm:gap-4 mb-1 rise"
+          style={{ animationDelay: '0.15s' }}
         >
-          <span className="block text-6xl neon-text-pink flicker">TRIVIA</span>
-          <span className="block text-7xl neon-text-amber flicker-slow">NIGHT</span>
-        </h1>
+          <span
+            aria-hidden
+            className="neon-text-amber flicker-slow shrink-0"
+            style={{
+              fontFamily: 'var(--font-shade)',
+              fontSize: 'clamp(2rem, 11vw, 4.5rem)',
+              lineHeight: 0.85,
+              transform: 'translateY(0.06em)',
+            }}
+          >
+            ?
+          </span>
+
+          <h1
+            className="text-center leading-[0.85]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            <span className="block text-5xl sm:text-6xl neon-text-pink flicker">
+              TRIVIA
+            </span>
+            <span className="block text-6xl sm:text-7xl neon-text-amber flicker-slow">
+              NIGHT
+            </span>
+          </h1>
+
+          <span
+            aria-hidden
+            className="neon-text-amber flicker-slow shrink-0"
+            style={{
+              fontFamily: 'var(--font-shade)',
+              fontSize: 'clamp(2rem, 11vw, 4.5rem)',
+              lineHeight: 0.85,
+              animationDelay: '2.4s',
+              transform: 'translateY(0.06em)',
+            }}
+          >
+            ?
+          </span>
+        </div>
 
         <p className="mt-6 mb-10 text-center text-lg text-[color:var(--color-paper-dim)] italic rise" style={{ animationDelay: '0.3s' }}>
           Four-letter rooms. Fifteen-second rounds.
