@@ -48,9 +48,20 @@ class ErrorMessage(BaseModel):
 # --- Inbound (client -> server) ---
 
 
+class CustomQuestionInput(BaseModel):
+    """A single host-supplied question. First answer is correct."""
+
+    text: str = Field(min_length=1, max_length=500)
+    correct_answer: str = Field(min_length=1, max_length=256)
+    incorrect_answers: list[str] = Field(min_length=1, max_length=10)
+
+
 class StartGameMessage(BaseModel):
     type: Literal["start_game"]
     categories: list[str] | None = None
+    custom_questions: list[CustomQuestionInput] | None = Field(
+        default=None, max_length=25
+    )
 
 
 class SubmitAnswerMessage(BaseModel):

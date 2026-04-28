@@ -13,7 +13,14 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Answer, Game, GameRound, GameStatus, Player, Question
 from app.rooms import Room
-from app.schemas import ErrorMessage, GameOver, PlayerInfo, RoundEnd, RoundStart
+from app.schemas import (
+    CustomQuestionInput,
+    ErrorMessage,
+    GameOver,
+    PlayerInfo,
+    RoundEnd,
+    RoundStart,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +40,7 @@ class _QuestionData:
     text: str
     correct_answer: str
     incorrect_answers: list[str]
+    is_custom: bool = False
 
 
 def _pick_questions(
@@ -87,25 +95,46 @@ def _leaderboard(room: Room) -> list[PlayerInfo]:
 async def run_game(
     room: Room,
     categories: list[str] | None = None,
+    custom_questions: list[CustomQuestionInput] | None = None,
 ) -> None:
     """Run the full game loop for a room. Called after host sends `start_game`.
 
-    When `categories` is provided, the question pool is restricted to those
-    categories.
+    When `custom_questions` is provided, those are used directly (length is
+    capped at 25) and `categories` is ignored. Otherwise the bank is sampled
+    with the optional `categories` filter applied.
     """
     try:
-        # Mark IN_PROGRESS and read the round count.
+        # If the host sent a custom pack, that drives the round count.
+        custom_count = (
+            min(25, len(custom_questions)) if custom_questions else None
+        )
+
+        # Mark IN_PROGRESS and decide on the round count.
         with SessionLocal() as db:
             game = db.get(Game, room.game_id)
             if game is None:
                 return
             game.status = GameStatus.IN_PROGRESS
+            if custom_count is not None:
+                game.total_rounds = custom_count
             total_rounds = game.total_rounds
             db.commit()
 
-        # Pick the question set up front; release the session before round loop.
-        with SessionLocal() as db:
-            questions = _pick_questions(db, total_rounds, categories)
+        # Build the question set up front.
+        if custom_questions:
+            questions = [
+                _QuestionData(
+                    id=-(i + 1),
+                    text=q.text,
+                    correct_answer=q.correct_answer,
+                    incorrect_answers=list(q.incorrect_answers),
+                    is_custom=True,
+                )
+                for i, q in enumerate(custom_questions[:total_rounds])
+            ]
+        else:
+            with SessionLocal() as db:
+                questions = _pick_questions(db, total_rounds, categories)
 
         for round_number, question in enumerate(questions, start=1):
             await _run_single_round(room, room.game_id, question, round_number, total_rounds)
@@ -152,28 +181,41 @@ async def _run_single_round(
 ) -> None:
     duration_ms = ROUND_DURATION_SECONDS * 1000
 
-    # Persist the round record and update the game's current_round counter.
-    with SessionLocal() as db:
-        game_round = GameRound(
-            game_id=game_id,
-            question_id=question.id,
-            round_number=round_number,
-            started_at=datetime.now(timezone.utc),
-        )
-        db.add(game_round)
-        game = db.get(Game, game_id)
-        if game is not None:
-            game.current_round = round_number
-        db.commit()
-        db.refresh(game_round)
-        round_id = game_round.id
+    # Custom questions don't have a row in `questions`, so we can't write a
+    # GameRound for them (FK violation). Skip the round-level DB writes when
+    # the question is custom; we still update the game's current_round so
+    # external monitors see progress.
+    round_id: int | None = None
+    if not question.is_custom:
+        with SessionLocal() as db:
+            game_round = GameRound(
+                game_id=game_id,
+                question_id=question.id,
+                round_number=round_number,
+                started_at=datetime.now(timezone.utc),
+            )
+            db.add(game_round)
+            game = db.get(Game, game_id)
+            if game is not None:
+                game.current_round = round_number
+            db.commit()
+            db.refresh(game_round)
+            round_id = game_round.id
+    else:
+        with SessionLocal() as db:
+            game = db.get(Game, game_id)
+            if game is not None:
+                game.current_round = round_number
+                db.commit()
 
     # Prep options (correct + incorrect, shuffled)
     options = [question.correct_answer, *question.incorrect_answers]
     random.shuffle(options)
 
-    # Track live answers keyed by player_id
-    room.current_round_id = round_id
+    # Track live answers keyed by player_id. For custom rounds where there's
+    # no GameRound row, use a synthetic id (negative round_number) so the
+    # `current_round_id is None` guard in the WS handler keeps working.
+    room.current_round_id = round_id if round_id is not None else -round_number
     room.current_answers = {}
 
     # Broadcast round start
@@ -195,21 +237,24 @@ async def _run_single_round(
             break
         await asyncio.sleep(0.2)
 
-    # Persist answers + scores in a fresh session.
+    # Persist answers + scores in a fresh session. Custom rounds skip the
+    # Answer rows (no parent GameRound) but still update the live player
+    # scores in the DB so the leaderboard endures.
     with SessionLocal() as db:
         for player_id, (choice, response_time_ms) in room.current_answers.items():
             is_correct = choice == question.correct_answer
             points = _calculate_points(is_correct, response_time_ms, duration_ms)
 
-            answer = Answer(
-                round_id=round_id,
-                player_id=player_id,
-                choice=choice,
-                is_correct=is_correct,
-                response_time_ms=response_time_ms,
-                points_awarded=points,
-            )
-            db.add(answer)
+            if round_id is not None:
+                answer = Answer(
+                    round_id=round_id,
+                    player_id=player_id,
+                    choice=choice,
+                    is_correct=is_correct,
+                    response_time_ms=response_time_ms,
+                    points_awarded=points,
+                )
+                db.add(answer)
 
             live_player = room.players.get(player_id)
             if live_player:
@@ -219,9 +264,10 @@ async def _run_single_round(
             if db_player:
                 db_player.score = live_player.score if live_player else db_player.score + points
 
-        round_row = db.get(GameRound, round_id)
-        if round_row is not None:
-            round_row.ended_at = datetime.now(timezone.utc)
+        if round_id is not None:
+            round_row = db.get(GameRound, round_id)
+            if round_row is not None:
+                round_row.ended_at = datetime.now(timezone.utc)
         db.commit()
 
     # Clear round state

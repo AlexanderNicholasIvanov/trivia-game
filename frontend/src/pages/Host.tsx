@@ -2,15 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audio } from '../audio'
 import CategoryPicker from '../components/CategoryPicker'
+import CustomPackInput from '../components/CustomPackInput'
+import { parseCustomPack } from '../utils/customPack'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
+
+type SourceMode = 'bank' | 'custom'
 
 export default function Host() {
   const navigate = useNavigate()
   const socketRef = useRef<TriviaSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [sourceMode, setSourceMode] = useState<SourceMode>('bank')
+  const [customPackText, setCustomPackText] = useState('')
 
   const {
     phase,
@@ -91,6 +97,15 @@ export default function Host() {
   }, [phase])
 
   const startGame = () => {
+    if (sourceMode === 'custom') {
+      const { questions } = parseCustomPack(customPackText)
+      if (questions.length === 0) return
+      socketRef.current?.send({
+        type: 'start_game',
+        custom_questions: questions,
+      })
+      return
+    }
     socketRef.current?.send({
       type: 'start_game',
       categories:
@@ -131,6 +146,10 @@ export default function Host() {
         onLeave={() => navigate('/')}
         selectedCategories={selectedCategories}
         onCategoriesChange={setSelectedCategories}
+        sourceMode={sourceMode}
+        onSourceModeChange={setSourceMode}
+        customPackText={customPackText}
+        onCustomPackChange={setCustomPackText}
       />
     )
   }
@@ -181,6 +200,10 @@ function LobbyScreen({
   onLeave,
   selectedCategories,
   onCategoriesChange,
+  sourceMode,
+  onSourceModeChange,
+  customPackText,
+  onCustomPackChange,
 }: {
   roomCode: string
   players: { id: number; nickname: string; score: number }[]
@@ -188,7 +211,15 @@ function LobbyScreen({
   onLeave: () => void
   selectedCategories: string[]
   onCategoriesChange: (cats: string[]) => void
+  sourceMode: SourceMode
+  onSourceModeChange: (m: SourceMode) => void
+  customPackText: string
+  onCustomPackChange: (s: string) => void
 }) {
+  const customCount = parseCustomPack(customPackText).questions.length
+  const startDisabled =
+    players.length === 0 ||
+    (sourceMode === 'custom' && customCount === 0)
   return (
     <StageFrame>
       <button
@@ -297,17 +328,55 @@ function LobbyScreen({
           <p className="font-mono text-xs uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-4">
             tonight's flavour
           </p>
-          <CategoryPicker
-            selected={selectedCategories}
-            onChange={onCategoriesChange}
-            className="max-w-3xl"
-          />
+
+          {/* Source mode tabs */}
+          <div className="mb-5 flex rounded-sm border border-[color:rgba(232,219,184,0.15)] p-1">
+            {(['bank', 'custom'] as const).map((mode) => {
+              const active = sourceMode === mode
+              const label = mode === 'bank' ? 'from the bank' : 'from your head'
+              return (
+                <button
+                  type="button"
+                  key={mode}
+                  onClick={() => onSourceModeChange(mode)}
+                  className="rounded-sm px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.3em] transition"
+                  style={{
+                    backgroundColor: active
+                      ? 'rgba(255,179,71,0.18)'
+                      : 'transparent',
+                    color: active
+                      ? 'var(--color-amber)'
+                      : 'var(--color-paper-dim)',
+                    textShadow: active
+                      ? '0 0 6px rgba(255,179,71,0.5)'
+                      : 'none',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="w-full max-w-3xl">
+            {sourceMode === 'bank' ? (
+              <CategoryPicker
+                selected={selectedCategories}
+                onChange={onCategoriesChange}
+              />
+            ) : (
+              <CustomPackInput
+                value={customPackText}
+                onChange={onCustomPackChange}
+              />
+            )}
+          </div>
         </div>
 
         {/* Start button */}
         <div className="mt-10 flex justify-center">
           <button
-            disabled={players.length === 0}
+            disabled={startDisabled}
             onClick={onStart}
             className="group relative overflow-hidden rounded-sm px-14 py-6 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:translate-y-[2px]"
             style={{ backgroundColor: 'var(--color-ink-soft)' }}

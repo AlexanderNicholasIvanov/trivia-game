@@ -99,7 +99,11 @@ async def websocket_host(websocket: WebSocket) -> None:
                     continue
                 if room.game_task is None or room.game_task.done():
                     room.game_task = asyncio.create_task(
-                        run_game(room, parsed_start.categories)
+                        run_game(
+                            room,
+                            categories=parsed_start.categories,
+                            custom_questions=parsed_start.custom_questions,
+                        )
                     )
             else:
                 await websocket.send_json(
