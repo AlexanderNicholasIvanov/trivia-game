@@ -1,5 +1,5 @@
 """Pydantic schemas for WebSocket message payloads."""
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -48,17 +48,22 @@ class ErrorMessage(BaseModel):
 # --- Inbound (client -> server) ---
 
 
+_BoundedShort = Annotated[str, Field(min_length=1, max_length=256)]
+
+
 class CustomQuestionInput(BaseModel):
     """A single host-supplied question. First answer is correct."""
 
     text: str = Field(min_length=1, max_length=500)
-    correct_answer: str = Field(min_length=1, max_length=256)
-    incorrect_answers: list[str] = Field(min_length=1, max_length=10)
+    correct_answer: _BoundedShort
+    incorrect_answers: list[_BoundedShort] = Field(min_length=1, max_length=10)
 
 
 class StartGameMessage(BaseModel):
     type: Literal["start_game"]
-    categories: list[str] | None = None
+    # Bound each category string so a malicious host can't drop a 10 MB
+    # entry into the WS message and balloon server memory.
+    categories: list[_BoundedShort] | None = None
     custom_questions: list[CustomQuestionInput] | None = Field(
         default=None, max_length=25
     )

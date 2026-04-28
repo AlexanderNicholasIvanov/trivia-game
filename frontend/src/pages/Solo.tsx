@@ -63,9 +63,7 @@ export default function Solo() {
     if (phase !== 'loading') return
     let cancelled = false
     const params = new URLSearchParams({ count: '10' })
-    if (selectedCategories.length > 0) {
-      params.set('categories', selectedCategories.join(','))
-    }
+    for (const cat of selectedCategories) params.append('categories', cat)
     fetch(`/api/solo/questions?${params}`)
       .then(async (r) => {
         if (!r.ok) {

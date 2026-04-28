@@ -43,14 +43,11 @@ class CategoriesResponse(BaseModel):
     categories: list[CategoryInfo]
 
 
-def _parse_categories(raw: str | None) -> list[str] | None:
-    """Parse a comma-separated `categories` query param.
-
-    Empty / missing / 'all' → None (no filter).
-    """
+def _normalise_categories(raw: list[str] | None) -> list[str] | None:
+    """Drop empties and treat ['all'] / [] / None as 'no filter'."""
     if not raw:
         return None
-    cleaned = [c.strip() for c in raw.split(",") if c.strip()]
+    cleaned = [c.strip() for c in raw if c and c.strip()]
     if not cleaned or cleaned == ["all"]:
         return None
     return cleaned
@@ -77,15 +74,16 @@ def list_categories() -> CategoriesResponse:
 @router.get("/solo/questions", response_model=SoloQuestionsResponse)
 def get_solo_questions(
     count: int = Query(default=10, ge=1, le=25),
-    categories: str | None = Query(default=None),
+    categories: list[str] | None = Query(default=None, max_length=32),
 ) -> SoloQuestionsResponse:
     """Return `count` random questions with options shuffled.
 
-    The optional `categories` query param is a comma-separated list of
-    category names; when present, the question pool is filtered to those
-    categories only.
+    The optional `categories` query param can be repeated to filter the
+    pool to those categories (e.g. `?categories=Geography&categories=History`).
+    Repeated params avoid the trap of comma-joining values that may
+    themselves contain commas.
     """
-    selected = _parse_categories(categories)
+    selected = _normalise_categories(categories)
     db = SessionLocal()
     try:
         id_query = db.query(Question.id)
