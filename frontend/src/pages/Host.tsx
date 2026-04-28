@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Show, SignInButton, SignUpButton } from '@clerk/react'
 import { audio } from '../audio'
 import CategoryPicker from '../components/CategoryPicker'
 import CustomPackInput from '../components/CustomPackInput'
@@ -10,7 +11,25 @@ import type { ServerMessage } from '../types'
 
 type SourceMode = 'bank' | 'custom'
 
+const CLERK_ENABLED = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
 export default function Host() {
+  // When Clerk isn't configured, the route works as it always has — no auth.
+  if (!CLERK_ENABLED) return <HostGame />
+
+  return (
+    <>
+      <Show when="signed-out">
+        <HostSignInPrompt />
+      </Show>
+      <Show when="signed-in">
+        <HostGame />
+      </Show>
+    </>
+  )
+}
+
+function HostGame() {
   const navigate = useNavigate()
   const socketRef = useRef<TriviaSocket | null>(null)
   const [connected, setConnected] = useState(false)
@@ -174,6 +193,71 @@ export default function Host() {
   return (
     <StageFrame>
       <div className="chalk text-2xl">Loading&hellip;</div>
+    </StageFrame>
+  )
+}
+
+function HostSignInPrompt() {
+  return (
+    <StageFrame>
+      <div className="mx-auto flex min-h-[80vh] max-w-xl flex-col items-center justify-center px-6 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-[color:var(--color-paper-dim)] mb-3 flicker-slow">
+          regulars only
+        </p>
+        <h1
+          className="neon-text-pink flicker mb-6"
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: 'clamp(2.5rem, 11vw, 4.5rem)',
+            lineHeight: 0.9,
+          }}
+        >
+          STAFF
+          <br />
+          ENTRANCE
+        </h1>
+        <p
+          className="text-[color:var(--color-paper-dim)] italic mb-10 max-w-sm"
+          style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem' }}
+        >
+          Hosts get the keys to the back. Sign in to set up tonight's room — players
+          can still walk in with a code from the front door.
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <SignInButton mode="modal">
+            <button
+              type="button"
+              className="group relative block w-full overflow-hidden rounded-sm px-6 py-4 text-center transition-all active:translate-y-[1px]"
+              style={{ backgroundColor: 'var(--color-ink-soft)' }}
+            >
+              <span className="pointer-events-none absolute inset-0 rounded-sm neon-box-amber group-hover:pulse-amber" />
+              <span
+                className="relative neon-text-amber text-2xl tracking-[0.18em]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                SIGN IN
+              </span>
+            </button>
+          </SignInButton>
+
+          <SignUpButton mode="modal">
+            <button
+              type="button"
+              className="group relative block w-full overflow-hidden rounded-sm px-6 py-3 text-center transition-all active:translate-y-[1px]"
+              style={{ backgroundColor: 'var(--color-ink-soft)' }}
+            >
+              <span className="pointer-events-none absolute inset-0 rounded-sm neon-box-pink" />
+              <span
+                className="relative neon-text-pink text-base tracking-[0.18em]"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                FIRST TIME? SIGN UP
+              </span>
+            </button>
+          </SignUpButton>
+        </div>
+      </div>
     </StageFrame>
   )
 }

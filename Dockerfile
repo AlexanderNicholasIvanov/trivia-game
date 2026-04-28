@@ -4,6 +4,11 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /build
 
+# Vite reads VITE_-prefixed env vars at build time and embeds them in the
+# bundle. Pass through any build args you want exposed to the frontend.
+ARG VITE_CLERK_PUBLISHABLE_KEY=""
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 

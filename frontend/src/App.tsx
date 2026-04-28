@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { audio } from './audio'
+import AccountButton from './components/AccountButton'
 import HeaderMark from './components/HeaderMark'
 import MuteToggle from './components/MuteToggle'
 import Home from './pages/Home'
@@ -35,6 +36,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <HeaderMark />
+      <AccountButton />
       <MuteToggle />
       <Routes>
         <Route path="/" element={<Home />} />
