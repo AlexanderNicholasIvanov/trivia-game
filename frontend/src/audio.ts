@@ -1,11 +1,12 @@
 /**
  * Audio engine for the bar room music and game SFX.
  *
- * Music: a small playlist of CC0 public-domain piano jazz from the
- * Internet Archive (1927-1946 78rpm transfers). Plays through a plain
- * HTMLAudioElement so it doesn't depend on the AudioContext being
- * resumed in the same tick as the user gesture — this is the most
- * autoplay-resilient pattern.
+ * Music: a small playlist of CC0 public-domain country blues from the
+ * Internet Archive — Blind Lemon Jefferson 1927-1928 78rpm transfers,
+ * the godfather lineage that B.B. King grew out of. Plays through a
+ * plain HTMLAudioElement so it doesn't depend on the AudioContext
+ * being resumed in the same tick as the user gesture — this is the
+ * most autoplay-resilient pattern.
  *
  * SFX (lock, correct, wrong, tick) are synthesised with the Web Audio
  * API and routed through a dedicated bus so they stay punchy when the
@@ -18,9 +19,9 @@ const MUSIC_VOLUME = 0.55 // base HTMLAudio volume when fully un-ducked
 const SFX_GAIN = 0.55
 
 const MUSIC_TRACKS = [
-  '/audio/sunny-morning.mp3', // Teddy Wilson, 1946 — solo piano
-  '/audio/geechee.mp3', // Fats Waller, 1927 — sparse piano + organ
-  '/audio/alone-in-the-rain.mp3', // Coon-Sanders Nighthawks, 1929 — slow group
+  '/audio/see-that-my-grave-is-kept-clean.mp3', // Blind Lemon Jefferson, 1928
+  '/audio/one-dime-blues.mp3', // Blind Lemon Jefferson, 1927
+  '/audio/crawlin-baby-blues.mp3', // Blind Lemon Jefferson, 1928
 ]
 
 type WindowWithWebkit = Window & {
