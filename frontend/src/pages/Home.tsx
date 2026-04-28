@@ -26,9 +26,8 @@ export default function Home() {
             className="neon-text-amber flicker-slow shrink-0"
             style={{
               fontFamily: 'var(--font-shade)',
-              fontSize: 'clamp(2rem, 11vw, 4.5rem)',
+              fontSize: 'clamp(3rem, 17vw, 9rem)',
               lineHeight: 0.85,
-              transform: 'translateY(0.06em)',
             }}
           >
             ?
@@ -51,10 +50,9 @@ export default function Home() {
             className="neon-text-amber flicker-slow shrink-0"
             style={{
               fontFamily: 'var(--font-shade)',
-              fontSize: 'clamp(2rem, 11vw, 4.5rem)',
+              fontSize: 'clamp(3rem, 17vw, 9rem)',
               lineHeight: 0.85,
               animationDelay: '2.4s',
-              transform: 'translateY(0.06em)',
             }}
           >
             ?
