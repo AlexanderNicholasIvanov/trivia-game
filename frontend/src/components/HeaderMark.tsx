@@ -17,43 +17,41 @@ export default function HeaderMark() {
     return { cx, cy, key: i }
   })
 
+  const SIZE = 48
+
   const mark = (
     <span
-      className="block flicker-slow"
-      style={{
-        filter:
-          'drop-shadow(0 0 4px rgba(255,179,71,0.85)) drop-shadow(0 0 12px rgba(255,179,71,0.45))',
-        lineHeight: 0,
-      }}
+      className="relative block flicker-slow"
+      style={{ width: SIZE, height: SIZE, lineHeight: 0 }}
       aria-hidden
     >
       <svg
-        width="36"
-        height="36"
+        width={SIZE}
+        height={SIZE}
         viewBox="0 0 64 64"
         xmlns="http://www.w3.org/2000/svg"
+        style={{
+          filter:
+            'drop-shadow(0 0 4px rgba(255,243,196,0.6)) drop-shadow(0 0 10px rgba(255,179,71,0.35))',
+        }}
       >
         {bulbs.map(({ cx, cy, key }) => (
-          <circle
-            key={key}
-            cx={cx}
-            cy={cy}
-            r="2.4"
-            fill="var(--color-chalk, #e8dbb8)"
-          />
+          <circle key={key} cx={cx} cy={cy} r="2.6" fill="#e8dbb8" />
         ))}
-        <text
-          x="32"
-          y="44"
-          textAnchor="middle"
-          fontFamily="var(--font-shade, 'Bungee Shade'), system-ui, sans-serif"
-          fontSize="34"
-          fontWeight="700"
-          fill="var(--color-amber, #ffb347)"
-        >
-          ?
-        </text>
       </svg>
+      <span
+        className="neon-text-amber absolute inset-0 flex items-center justify-center"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '1.6rem',
+          fontWeight: 700,
+          letterSpacing: '0.02em',
+          lineHeight: 1,
+          paddingBottom: '2px', // optical centering for "?" cap height
+        }}
+      >
+        ?
+      </span>
     </span>
   )
 

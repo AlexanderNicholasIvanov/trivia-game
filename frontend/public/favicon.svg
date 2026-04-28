@@ -14,7 +14,7 @@
     <circle cx="9.485" cy="19" r="2.4"/>
     <circle cx="19" cy="9.485" r="2.4"/>
   </g>
-  <text x="32" y="46" text-anchor="middle"
-        font-family="'Bungee Shade', system-ui, sans-serif"
-        font-size="36" font-weight="700" fill="#ffb347">?</text>
+  <text x="32" y="44" text-anchor="middle"
+        font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="34" font-weight="900" fill="#ffb347">?</text>
 </svg>
