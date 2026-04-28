@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { audio } from '../audio'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
 
 export default function Host() {
+  const navigate = useNavigate()
   const socketRef = useRef<TriviaSocket | null>(null)
   const [connected, setConnected] = useState(false)
 
@@ -115,7 +117,14 @@ export default function Host() {
   }
 
   if (phase === 'lobby') {
-    return <LobbyScreen roomCode={roomCode} players={players} onStart={startGame} />
+    return (
+      <LobbyScreen
+        roomCode={roomCode}
+        players={players}
+        onStart={startGame}
+        onLeave={() => navigate('/')}
+      />
+    )
   }
 
   if (phase === 'round' && round) {
@@ -161,13 +170,24 @@ function LobbyScreen({
   roomCode,
   players,
   onStart,
+  onLeave,
 }: {
   roomCode: string
   players: { id: number; nickname: string; score: number }[]
   onStart: () => void
+  onLeave: () => void
 }) {
   return (
     <StageFrame>
+      <button
+        type="button"
+        onClick={onLeave}
+        className="fixed top-3 left-3 z-50 chalk text-xs uppercase tracking-[0.4em] flicker-slow"
+        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        aria-label="Close the room and return home"
+      >
+        ← close the bar
+      </button>
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl flex-col">
         {/* Top sign */}
         <div className="relative mb-8 flex items-center justify-between">

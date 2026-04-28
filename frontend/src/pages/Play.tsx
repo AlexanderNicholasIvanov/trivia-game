@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { audio } from '../audio'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
 
 export default function Play() {
+  const navigate = useNavigate()
   const { roomCode } = useParams<{ roomCode: string }>()
   const [search] = useSearchParams()
   const nickname = search.get('nickname') ?? ''
@@ -144,7 +145,14 @@ export default function Play() {
   const selfPlayer = players.find((p) => p.id === selfPlayerId)
 
   if (phase === 'lobby') {
-    return <PlayerLobby nickname={nickname} roomCode={roomCode} count={players.length} />
+    return (
+      <PlayerLobby
+        nickname={nickname}
+        roomCode={roomCode}
+        count={players.length}
+        onLeave={() => navigate('/')}
+      />
+    )
   }
 
   if (phase === 'round' && round) {
@@ -228,13 +236,24 @@ function PlayerLobby({
   nickname,
   roomCode,
   count,
+  onLeave,
 }: {
   nickname: string
   roomCode: string
   count: number
+  onLeave: () => void
 }) {
   return (
     <Frame>
+      <button
+        type="button"
+        onClick={onLeave}
+        className="fixed top-3 left-3 z-50 chalk text-xs uppercase tracking-[0.4em] flicker-slow"
+        style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        aria-label="Leave the room and return home"
+      >
+        ← back to the bar
+      </button>
       <TopTag nickname={nickname} />
 
       <div className="flex flex-1 flex-col items-center justify-center text-center">
