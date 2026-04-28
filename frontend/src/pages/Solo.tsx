@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { audio } from '../audio'
+import CategoryPicker from '../components/CategoryPicker'
 
 const ROUND_DURATION_SECONDS = 15
 const REVEAL_SECONDS = 3
@@ -17,7 +18,7 @@ type SoloQuestion = {
   difficulty: string
 }
 
-type Phase = 'loading' | 'round' | 'reveal' | 'final' | 'error'
+type Phase = 'setup' | 'loading' | 'round' | 'reveal' | 'final' | 'error'
 
 type Best = { score: number; accuracy: number; date: string } | null
 
@@ -45,7 +46,7 @@ function calculatePoints(responseMs: number, durationMs: number): number {
 }
 
 export default function Solo() {
-  const [phase, setPhase] = useState<Phase>('loading')
+  const [phase, setPhase] = useState<Phase>('setup')
   const [questions, setQuestions] = useState<SoloQuestion[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [index, setIndex] = useState(0)
@@ -55,11 +56,17 @@ export default function Solo() {
   const [correctCount, setCorrectCount] = useState(0)
   const [chosen, setChosen] = useState<string | null>(null)
   const [pointsEarned, setPointsEarned] = useState(0)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const startedAtRef = useRef<number>(0)
 
   useEffect(() => {
+    if (phase !== 'loading') return
     let cancelled = false
-    fetch('/api/solo/questions?count=10')
+    const params = new URLSearchParams({ count: '10' })
+    if (selectedCategories.length > 0) {
+      params.set('categories', selectedCategories.join(','))
+    }
+    fetch(`/api/solo/questions?${params}`)
       .then(async (r) => {
         if (!r.ok) {
           const detail = await r
@@ -89,7 +96,7 @@ export default function Solo() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [phase, selectedCategories])
 
   const total = questions.length
   const current = questions[index]
@@ -136,6 +143,14 @@ export default function Solo() {
     setPhase('round')
   }
 
+  if (phase === 'setup')
+    return (
+      <SetupScreen
+        selected={selectedCategories}
+        onChange={setSelectedCategories}
+        onBegin={() => setPhase('loading')}
+      />
+    )
   if (phase === 'loading') return <Loading />
   if (phase === 'error') return <ErrorView message={errorMsg ?? 'Something went sideways.'} />
   if (phase === 'final')
@@ -675,6 +690,64 @@ function FinalScreen({
             ← back to the bar
           </button>
         </div>
+      </div>
+    </Stage>
+  )
+}
+
+function SetupScreen({
+  selected,
+  onChange,
+  onBegin,
+}: {
+  selected: string[]
+  onChange: (cats: string[]) => void
+  onBegin: () => void
+}) {
+  return (
+    <Stage>
+      <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-5 py-12 text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.5em] text-[color:var(--color-paper-dim)] mb-3 flicker-slow">
+          vs. the house
+        </p>
+        <h1
+          className="neon-text-amber flicker mb-2"
+          style={{
+            fontFamily: 'var(--font-shade)',
+            fontSize: 'clamp(3rem, 14vw, 5rem)',
+            lineHeight: 0.9,
+          }}
+        >
+          FLY SOLO
+        </h1>
+        <p
+          className="text-[color:var(--color-paper-dim)] italic mb-10"
+          style={{ fontFamily: 'var(--font-serif)', fontSize: '1.05rem' }}
+        >
+          ten rounds, fifteen seconds each. pick your poison.
+        </p>
+
+        <div className="mb-10 w-full">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-4">
+            the menu
+          </p>
+          <CategoryPicker selected={selected} onChange={onChange} />
+        </div>
+
+        <button
+          type="button"
+          onClick={onBegin}
+          className="group relative w-full max-w-xs overflow-hidden rounded-sm px-8 py-5 active:translate-y-[1px]"
+          style={{ backgroundColor: 'var(--color-ink-soft)' }}
+        >
+          <span className="pointer-events-none absolute inset-0 rounded-sm neon-box-amber group-hover:pulse-amber" />
+          <span
+            className="relative neon-text-amber text-2xl tracking-[0.25em]"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            POUR ME ONE
+          </span>
+        </button>
       </div>
     </Stage>
   )

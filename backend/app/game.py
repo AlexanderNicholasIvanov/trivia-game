@@ -35,11 +35,25 @@ class _QuestionData:
     incorrect_answers: list[str]
 
 
-def _pick_questions(db: Session, count: int) -> list[_QuestionData]:
-    """Pick `count` random questions from the bank, detached from the session."""
-    all_ids = [q.id for q in db.query(Question.id).all()]
+def _pick_questions(
+    db: Session,
+    count: int,
+    categories: list[str] | None = None,
+) -> list[_QuestionData]:
+    """Pick `count` random questions from the bank, detached from the session.
+
+    When `categories` is provided and non-empty, the pool is restricted
+    to those categories. An empty list or None means "any category".
+    """
+    id_query = db.query(Question.id)
+    if categories:
+        id_query = id_query.filter(Question.category.in_(categories))
+    all_ids = [q.id for q in id_query.all()]
     if len(all_ids) < count:
-        raise RuntimeError(f"Not enough questions in bank (need {count}, have {len(all_ids)})")
+        scope = "in selected categories" if categories else "in bank"
+        raise RuntimeError(
+            f"Not enough questions {scope} (need {count}, have {len(all_ids)})"
+        )
     chosen_ids = random.sample(all_ids, count)
     rows = db.query(Question).filter(Question.id.in_(chosen_ids)).all()
     return [
@@ -70,8 +84,15 @@ def _leaderboard(room: Room) -> list[PlayerInfo]:
     return [PlayerInfo(id=p.id, nickname=p.nickname, score=p.score) for p in sorted_players]
 
 
-async def run_game(room: Room) -> None:
-    """Run the full game loop for a room. Called after host sends `start_game`."""
+async def run_game(
+    room: Room,
+    categories: list[str] | None = None,
+) -> None:
+    """Run the full game loop for a room. Called after host sends `start_game`.
+
+    When `categories` is provided, the question pool is restricted to those
+    categories.
+    """
     try:
         # Mark IN_PROGRESS and read the round count.
         with SessionLocal() as db:
@@ -84,7 +105,7 @@ async def run_game(room: Room) -> None:
 
         # Pick the question set up front; release the session before round loop.
         with SessionLocal() as db:
-            questions = _pick_questions(db, total_rounds)
+            questions = _pick_questions(db, total_rounds, categories)
 
         for round_number, question in enumerate(questions, start=1):
             await _run_single_round(room, room.game_id, question, round_number, total_rounds)

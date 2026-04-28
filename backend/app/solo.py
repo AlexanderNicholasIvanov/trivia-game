@@ -1,4 +1,4 @@
-"""REST endpoints for single-player mode.
+"""REST endpoints for single-player mode and the shared category list.
 
 Solo play doesn't need the WebSocket coordination or persistence the
 multiplayer flow uses — the client fetches a batch of questions, runs
@@ -12,12 +12,13 @@ import random
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import func
 
 from app.database import SessionLocal
 from app.models import Question
 
 
-router = APIRouter(prefix="/api/solo", tags=["solo"])
+router = APIRouter(prefix="/api", tags=["solo"])
 
 
 class SoloQuestion(BaseModel):
@@ -33,18 +34,72 @@ class SoloQuestionsResponse(BaseModel):
     questions: list[SoloQuestion]
 
 
-@router.get("/questions", response_model=SoloQuestionsResponse)
-def get_solo_questions(
-    count: int = Query(default=10, ge=1, le=25),
-) -> SoloQuestionsResponse:
-    """Return `count` random questions with options shuffled."""
+class CategoryInfo(BaseModel):
+    name: str
+    count: int
+
+
+class CategoriesResponse(BaseModel):
+    categories: list[CategoryInfo]
+
+
+def _parse_categories(raw: str | None) -> list[str] | None:
+    """Parse a comma-separated `categories` query param.
+
+    Empty / missing / 'all' → None (no filter).
+    """
+    if not raw:
+        return None
+    cleaned = [c.strip() for c in raw.split(",") if c.strip()]
+    if not cleaned or cleaned == ["all"]:
+        return None
+    return cleaned
+
+
+@router.get("/categories", response_model=CategoriesResponse)
+def list_categories() -> CategoriesResponse:
+    """Return every category in the question bank with a question count."""
     db = SessionLocal()
     try:
-        all_ids = [row[0] for row in db.query(Question.id).all()]
+        rows = (
+            db.query(Question.category, func.count(Question.id))
+            .group_by(Question.category)
+            .order_by(Question.category)
+            .all()
+        )
+        return CategoriesResponse(
+            categories=[CategoryInfo(name=name, count=n) for name, n in rows]
+        )
+    finally:
+        db.close()
+
+
+@router.get("/solo/questions", response_model=SoloQuestionsResponse)
+def get_solo_questions(
+    count: int = Query(default=10, ge=1, le=25),
+    categories: str | None = Query(default=None),
+) -> SoloQuestionsResponse:
+    """Return `count` random questions with options shuffled.
+
+    The optional `categories` query param is a comma-separated list of
+    category names; when present, the question pool is filtered to those
+    categories only.
+    """
+    selected = _parse_categories(categories)
+    db = SessionLocal()
+    try:
+        id_query = db.query(Question.id)
+        if selected:
+            id_query = id_query.filter(Question.category.in_(selected))
+        all_ids = [row[0] for row in id_query.all()]
         if len(all_ids) < count:
+            scope = "in selected categories" if selected else "in bank"
             raise HTTPException(
                 status_code=503,
-                detail=f"Not enough questions in bank (have {len(all_ids)}, need {count})",
+                detail=(
+                    f"Not enough questions {scope} "
+                    f"(have {len(all_ids)}, need {count})"
+                ),
             )
         chosen_ids = random.sample(all_ids, count)
         rows = db.query(Question).filter(Question.id.in_(chosen_ids)).all()

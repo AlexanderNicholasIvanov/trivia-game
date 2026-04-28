@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { audio } from '../audio'
+import CategoryPicker from '../components/CategoryPicker'
 import { useStore } from '../store'
 import { TriviaSocket } from '../ws'
 import type { ServerMessage } from '../types'
@@ -9,6 +10,7 @@ export default function Host() {
   const navigate = useNavigate()
   const socketRef = useRef<TriviaSocket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
 
   const {
     phase,
@@ -89,7 +91,11 @@ export default function Host() {
   }, [phase])
 
   const startGame = () => {
-    socketRef.current?.send({ type: 'start_game' })
+    socketRef.current?.send({
+      type: 'start_game',
+      categories:
+        selectedCategories.length > 0 ? selectedCategories : null,
+    })
   }
 
   if (error) {
@@ -123,6 +129,8 @@ export default function Host() {
         players={players}
         onStart={startGame}
         onLeave={() => navigate('/')}
+        selectedCategories={selectedCategories}
+        onCategoriesChange={setSelectedCategories}
       />
     )
   }
@@ -171,11 +179,15 @@ function LobbyScreen({
   players,
   onStart,
   onLeave,
+  selectedCategories,
+  onCategoriesChange,
 }: {
   roomCode: string
   players: { id: number; nickname: string; score: number }[]
   onStart: () => void
   onLeave: () => void
+  selectedCategories: string[]
+  onCategoriesChange: (cats: string[]) => void
 }) {
   return (
     <StageFrame>
@@ -278,6 +290,18 @@ function LobbyScreen({
               </ul>
             )}
           </div>
+        </div>
+
+        {/* Tonight's flavour */}
+        <div className="mt-10 flex flex-col items-center">
+          <p className="font-mono text-xs uppercase tracking-[0.4em] text-[color:var(--color-paper-dim)] mb-4">
+            tonight's flavour
+          </p>
+          <CategoryPicker
+            selected={selectedCategories}
+            onChange={onCategoriesChange}
+            className="max-w-3xl"
+          />
         </div>
 
         {/* Start button */}

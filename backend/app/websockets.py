@@ -19,6 +19,7 @@ from app.schemas import (
     PlayerJoined,
     PlayerLeft,
     RoomCreated,
+    StartGameMessage,
     SubmitAnswerMessage,
 )
 
@@ -85,8 +86,21 @@ async def websocket_host(websocket: WebSocket) -> None:
             elif msg_type == "start_game":
                 # Kick off the game loop as a background task so we keep receiving host messages.
                 # Track it on the room so close_room can cancel it on disconnect.
+                try:
+                    parsed_start = StartGameMessage.model_validate(data)
+                except ValidationError as exc:
+                    first_error = exc.errors()[0]
+                    field = ".".join(str(p) for p in first_error["loc"])
+                    await websocket.send_json(
+                        ErrorMessage(
+                            message=f"Invalid start_game ({field}): {first_error['msg']}"
+                        ).model_dump()
+                    )
+                    continue
                 if room.game_task is None or room.game_task.done():
-                    room.game_task = asyncio.create_task(run_game(room))
+                    room.game_task = asyncio.create_task(
+                        run_game(room, parsed_start.categories)
+                    )
             else:
                 await websocket.send_json(
                     ErrorMessage(message=f"Unknown message type: {msg_type}").model_dump()

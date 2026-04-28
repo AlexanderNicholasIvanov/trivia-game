@@ -50,6 +50,7 @@ class ErrorMessage(BaseModel):
 
 class StartGameMessage(BaseModel):
     type: Literal["start_game"]
+    categories: list[str] | None = None
 
 
 class SubmitAnswerMessage(BaseModel):
