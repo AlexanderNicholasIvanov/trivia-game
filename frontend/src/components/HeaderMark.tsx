@@ -60,7 +60,7 @@ export default function HeaderMark() {
   if (isHome) {
     return (
       <div
-        className="fixed top-2 left-1/2 z-40 -translate-x-1/2 select-none"
+        className="absolute top-2 left-1/2 z-40 -translate-x-1/2 select-none"
         aria-label="The Regulars Club"
       >
         {mark}
@@ -71,7 +71,7 @@ export default function HeaderMark() {
   return (
     <Link
       to="/"
-      className="fixed top-2 left-1/2 z-40 -translate-x-1/2 select-none"
+      className="absolute top-2 left-1/2 z-40 -translate-x-1/2 select-none"
       aria-label="Back to the menu"
     >
       {mark}
