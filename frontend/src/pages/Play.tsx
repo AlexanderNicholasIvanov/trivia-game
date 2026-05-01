@@ -218,7 +218,7 @@ function TopTag({
           style={{
             backgroundColor: 'var(--color-neon)',
             boxShadow:
-              '0 0 6px rgba(255,61,127,0.9), 0 0 14px rgba(255,61,127,0.5)',
+              '0 0 6px rgba(214, 69, 47,0.9), 0 0 14px rgba(214, 69, 47,0.5)',
           }}
         />
         <span
@@ -445,7 +445,7 @@ function RoundView({
                 ? 'var(--color-neon)'
                 : 'var(--color-amber)',
               boxShadow: urgent
-                ? '0 0 10px rgba(255,61,127,0.7)'
+                ? '0 0 10px rgba(214, 69, 47,0.7)'
                 : '0 0 10px rgba(255,179,71,0.7)',
             }}
           />

@@ -269,7 +269,7 @@ function StageFrame({ children }: { children: React.ReactNode }) {
         className="pointer-events-none absolute inset-0 opacity-80"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,179,71,0.12), transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,61,127,0.08), transparent 60%)',
+            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,179,71,0.12), transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(214, 69, 47,0.08), transparent 60%)',
         }}
       />
       <div className="relative z-10 min-h-screen px-10 py-10">{children}</div>
@@ -326,7 +326,7 @@ function LobbyScreen({
               style={{
                 backgroundColor: 'var(--color-neon)',
                 boxShadow:
-                  '0 0 8px rgba(255,61,127,0.9), 0 0 20px rgba(255,61,127,0.5)',
+                  '0 0 8px rgba(214, 69, 47,0.9), 0 0 20px rgba(214, 69, 47,0.5)',
               }}
             />
             <span>on air</span>
@@ -778,7 +778,7 @@ function TimerSegment({ seconds, urgent }: { seconds: number; urgent: boolean })
         border: '2px solid',
         borderColor: urgent ? 'var(--color-neon)' : 'var(--color-amber)',
         boxShadow: urgent
-          ? '0 0 20px rgba(255,61,127,0.5), inset 0 0 12px rgba(255,61,127,0.1)'
+          ? '0 0 20px rgba(214, 69, 47,0.5), inset 0 0 12px rgba(214, 69, 47,0.1)'
           : '0 0 20px rgba(255,179,71,0.3), inset 0 0 12px rgba(255,179,71,0.1)',
       }}
     >

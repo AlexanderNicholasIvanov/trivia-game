@@ -322,7 +322,7 @@ function DecorStars() {
         style={{
           color: 'var(--color-neon)',
           textShadow:
-            '0 0 8px rgba(255,61,127,0.9), 0 0 18px rgba(255,61,127,0.5)',
+            '0 0 8px rgba(214, 69, 47,0.9), 0 0 18px rgba(214, 69, 47,0.5)',
         }}
       >
         ✶

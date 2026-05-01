@@ -7,14 +7,28 @@
   --color-paper-dim: #cdc09a;
   --color-amber: #ffb347;
   --color-amber-deep: #d98a1f;
-  --color-neon: #ff3d7f;
+  /*
+   * Was hot pink (#ff3d7f) — too 1985-Vegas-marquee for the 1928 delta-blues
+   * playlist. Re-tuned to a faded juke-joint poster red so secondary CTAs
+   * still read distinct from amber but live in the same era as the music.
+   */
+  --color-neon: #d6452f;
   --color-felt: #2a4c3a;
   --color-felt-deep: #173024;
   --color-chalk: #e8dbb8;
   --color-brass: #c19a49;
+  /* New warm accents for borders, dividers, stained-paper effects. */
+  --color-tobacco: #7a4f1d;
+  --color-sepia: #3a2410;
 
-  --font-display: "Bungee", system-ui, sans-serif;
-  --font-shade: "Bungee Shade", system-ui, sans-serif;
+  /*
+   * Display: Bevan — vintage slab-serif poster face, 1920s music-hall
+   *   broadside. Replaces Bungee.
+   * Shade: Rye — Western/blues wood-type with built-in shadow. Replaces
+   *   Bungee Shade.
+   */
+  --font-display: "Bevan", "Bungee", system-ui, sans-serif;
+  --font-shade: "Rye", "Bungee Shade", system-ui, sans-serif;
   --font-serif: "Fraunces", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
@@ -38,7 +52,7 @@ body {
     ),
     radial-gradient(
       ellipse 60% 50% at 80% 100%,
-      rgba(255, 61, 127, 0.07),
+      rgba(214, 69, 47, 0.07),
       transparent 60%
     );
   background-attachment: fixed;
@@ -66,11 +80,12 @@ body::before {
     0 0 60px rgba(255, 179, 71, 0.2);
 }
 .neon-box-pink {
+  /* Glow rgba matches --color-neon (#d6452f, faded poster red). */
   box-shadow:
     inset 0 0 0 2px var(--color-neon),
-    0 0 8px rgba(255, 61, 127, 0.75),
-    0 0 24px rgba(255, 61, 127, 0.45),
-    0 0 60px rgba(255, 61, 127, 0.2);
+    0 0 8px rgba(214, 69, 47, 0.75),
+    0 0 24px rgba(214, 69, 47, 0.45),
+    0 0 60px rgba(214, 69, 47, 0.2);
 }
 .neon-box-felt {
   box-shadow:
@@ -87,10 +102,11 @@ body::before {
 }
 .neon-text-pink {
   color: var(--color-neon);
+  /* Glow rgba matches --color-neon (#d6452f, faded poster red). */
   text-shadow:
-    0 0 4px rgba(255, 61, 127, 0.95),
-    0 0 14px rgba(255, 61, 127, 0.65),
-    0 0 30px rgba(255, 61, 127, 0.45);
+    0 0 4px rgba(214, 69, 47, 0.95),
+    0 0 14px rgba(214, 69, 47, 0.65),
+    0 0 30px rgba(214, 69, 47, 0.45);
 }
 .neon-text-bulb {
   color: var(--color-chalk);

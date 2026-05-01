@@ -388,7 +388,7 @@ function RoundFrame({
                 boxShadow: isReveal
                   ? '0 0 8px rgba(255,243,196,0.5)'
                   : urgent
-                    ? '0 0 10px rgba(255,61,127,0.7)'
+                    ? '0 0 10px rgba(214, 69, 47,0.7)'
                     : '0 0 10px rgba(255,179,71,0.7)',
               }}
             />
@@ -460,7 +460,7 @@ function RoundFrame({
                     state === 'right'
                       ? '0 0 0 2px var(--color-amber), 0 0 26px rgba(255,179,71,0.6), 0 8px 0 #0d1f18'
                       : state === 'wrong'
-                        ? '0 0 0 2px var(--color-neon), 0 0 22px rgba(255,61,127,0.55), 0 8px 0 #1d0a14'
+                        ? '0 0 0 2px var(--color-neon), 0 0 22px rgba(214, 69, 47,0.55), 0 8px 0 #1d0a14'
                         : `0 8px 0 ${palette.shadow}, 0 12px 30px -8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)`,
                   border:
                     state === 'right'
@@ -846,7 +846,7 @@ function Stage({ children }: { children: React.ReactNode }) {
         className="pointer-events-none absolute inset-0 opacity-80"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,179,71,0.10), transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,61,127,0.08), transparent 60%)',
+            'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,179,71,0.10), transparent 60%), radial-gradient(ellipse 60% 40% at 50% 100%, rgba(214, 69, 47,0.08), transparent 60%)',
         }}
       />
       <div className="relative z-10">{children}</div>

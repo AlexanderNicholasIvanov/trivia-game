@@ -58,7 +58,7 @@ export default function CustomPackInput({
       </div>
 
       {errors.length > 0 && (
-        <ul className="rounded-sm border border-[color:rgba(255,61,127,0.4)] bg-[rgba(255,61,127,0.06)] px-3 py-2 font-mono text-[11px] text-[color:var(--color-neon)]">
+        <ul className="rounded-sm border border-[color:rgba(214, 69, 47,0.4)] bg-[rgba(214, 69, 47,0.06)] px-3 py-2 font-mono text-[11px] text-[color:var(--color-neon)]">
           {errors.slice(0, 5).map((err, i) => (
             <li key={i}>· {err}</li>
           ))}
